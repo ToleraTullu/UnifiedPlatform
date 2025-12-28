@@ -15,48 +15,22 @@
         <div class="card">
           <h3>User Management</h3>
           <p style="color:#64748b">Create users and assign them to a sector or make them admins.</p>
-          <div style="margin-top:1rem;">
-            <h4>Role Descriptions</h4>
-            <ul style="color:#475569">
-              <li><strong>Admin:</strong> Full access to all modules, can create users, manage rates and system settings.</li>
-              <li><strong>Exchange:</strong> Can record buys/sells, view holdings and transactions.</li>
-              <li><strong>Pharmacy:</strong> Can perform POS sales, view/manage stock (admins only to create items).</li>
-              <li><strong>Construction:</strong> Can log expenses/income and view project financials.</li>
-            </ul>
-
-            <h4 style="margin-top:12px">Permissions Matrix</h4>
-            <table class="data-table" style="margin-top:8px;">
-              <thead>
-                <tr><th>Action</th><th>Admin</th><th>Exchange</th><th>Pharmacy</th><th>Construction</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>View Dashboards</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
-                <tr><td>Record Buy/Sell (Exchange)</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
-                <tr><td>Manage Exchange Rates</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
-                <tr><td>POS Sales (Pharmacy)</td><td>✅</td><td>❌</td><td>✅</td><td>❌</td></tr>
-                <tr><td>Manage Pharmacy Stock</td><td>✅</td><td>❌</td><td>Limited*</td><td>❌</td></tr>
-                <tr><td>Manage Users</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
-                <tr><td>Log Construction Expenses</td><td>✅</td><td>❌</td><td>❌</td><td>✅</td></tr>
-              </tbody>
-            </table>
-            <div style="color:#64748b; font-size:0.9rem; margin-top:6px">*Pharmacy users can add stock quantity via the stock modal; only Admin can create or change metadata (prices, description, unit type).</div>
-          </div>
           <div id="no-access" style="display:none;color:#ef4444;font-weight:bold">Access denied. Admins only.</div>
 
           <form id="user-form" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-top:10px;">
-            <div style="width:150px">
+            <div class="form-group">
               <label>Username</label>
               <input name="username" required />
             </div>
-            <div style="width:160px">
+            <div class="form-group">
               <label>Password</label>
               <input name="password" type="password" required />
             </div>
-            <div style="width:200px">
+            <div class="form-group">
               <label>Full Name</label>
               <input name="name" />
             </div>
-            <div style="width:200px">
+            <div class="form-group">
               <label>Role / Sector</label>
               <select name="role">
                 <option value="pharmacy_user">Pharmacy</option>
@@ -65,7 +39,7 @@
                 <option value="admin">Admin</option>
               </select>
             </div>
-            <div>
+            <div class="form-group">
               <button class="btn-primary" type="submit">Create</button>
             </div>
           </form>

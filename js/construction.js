@@ -5,10 +5,18 @@
 
 class ConstructionModule {
     constructor() {
-        this.expenseKey = 'construction_expenses';
-        this.incomeKey = 'construction_income';
-        this.siteKey = 'construction_sites';
+        this.sitesKey = 'construction_sites';
+        this.expKey = 'construction_expenses';
+        this.incKey = 'construction_income';
+        this.initListeners();
         this.initForms();
+    }
+
+    initListeners() {
+        document.addEventListener('click', (e) => {
+            if(e.target.id === 'btn-site-add') this.openAddSiteModal();
+            // Add other button IDs here
+        });
     }
 
     onViewLoad(action) {
@@ -20,7 +28,7 @@ class ConstructionModule {
                 this.renderDashboard();
                 break;
             case 'sites':
-                this.loadSites();
+                this.renderSites();
                 break;
             case 'expense':
             case 'income':
@@ -33,8 +41,8 @@ class ConstructionModule {
     }
 
     // --- Sites Management ---
-    populateSiteSelects() {
-        const sites = window.Store.get(this.siteKey) || [];
+    async populateSiteSelects() {
+        const sites = await window.Store.get(this.sitesKey) || [];
         // Only show Active sites in dropdown
         const activeSites = sites.filter(s => s.status === 'Active');
 
@@ -77,21 +85,26 @@ class ConstructionModule {
         const close = () => modal.classList.add('hidden');
         document.querySelector('.close-modal').onclick = close;
 
-        document.getElementById('add-site-form').onsubmit = (e) => {
+        document.getElementById('add-site-form').onsubmit = async (e) => {
             e.preventDefault();
             const name = document.getElementById('new-site-name').value;
             const status = document.getElementById('new-site-status').value;
 
-            window.Store.add(this.siteKey, { name, status });
+            await this.saveSite({ name, status });
 
             alert('Site Added Successfully');
             close();
-            this.loadSites(); // Refresh list if visible
+            this.renderSites(); // Refresh list if visible
         };
     }
 
-    loadSites() {
-        const sites = window.Store.get(this.siteKey) || [];
+    async saveSite(site) {
+        await window.Store.add(this.sitesKey, site);
+        this.renderSites();
+    }
+
+    async renderSites() {
+        const sites = await window.Store.get(this.sitesKey) || [];
         const tbody = document.getElementById('construction-sites-body');
         if (!tbody) return;
 
@@ -122,9 +135,9 @@ class ConstructionModule {
     }
 
     // --- Dashboard ---
-    renderDashboard() {
-        const expenses = window.Store.get(this.expenseKey) || [];
-        const incomes = window.Store.get(this.incomeKey) || [];
+    async renderDashboard() {
+        const expenses = await window.Store.get(this.expKey) || [];
+        const incomes = await window.Store.get(this.incKey) || [];
 
         const totExp = expenses.reduce((a, c) => a + c.amount, 0);
         const totInc = incomes.reduce((a, c) => a + c.amount, 0);
@@ -140,9 +153,9 @@ class ConstructionModule {
         setTxt('cons-dash-balance', bal);
     }
 
-    updateStats() {
-        const expenses = window.Store.get(this.expenseKey) || [];
-        const incomes = window.Store.get(this.incomeKey) || [];
+    async updateStats() {
+        const expenses = await window.Store.get(this.expKey) || [];
+        const incomes = await window.Store.get(this.incKey) || [];
         const totExp = expenses.reduce((a, c) => a + c.amount, 0);
         const totInc = incomes.reduce((a, c) => a + c.amount, 0);
 

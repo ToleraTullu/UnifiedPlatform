@@ -148,8 +148,15 @@ class ExchangeModule {
     }
 
     initForm(type) {
-        const form = document.querySelector('form');
-        if (!form) return;
+        let form;
+        if (type === 'buy') form = document.getElementById('exchange-buy-form');
+        else if (type === 'sell') form = document.getElementById('exchange-sell-form');
+        else form = document.querySelector('form'); // Fallback
+
+        if (!form) {
+            console.error(`Form for ${type} not found`);
+            return;
+        }
 
         // Populate currency dropdown from admin rates settings (supports buy_rate and sell_rate)
         const rates = window.Store.get(this.ratesKey) || null;

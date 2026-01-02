@@ -1,6 +1,6 @@
 /**
- * Store.js
- * Manages LocalStorage and Mock Data
+ * AsyncStore.js (Mock Implementation)
+ * Replaces fetch-based Store with Promisified LocalStorage for environment without PHP server.
  */
 
 const MOCK_USERS = [
@@ -13,50 +13,78 @@ const MOCK_USERS = [
 const INIT_KEYS = {
     'unified_users': MOCK_USERS,
     'exchange_transactions': [],
+    'exchange_rates': {},
+    'exchange_holdings': {},
     'pharmacy_items': [
-        { id: 1, name: 'Paracetamol', buy_price: 10, qty: 100 },
-        { id: 2, name: 'Amoxicillin', buy_price: 25, qty: 50 },
-        { id: 3, name: 'Vitamin C', buy_price: 5, qty: 200 }
+        { id: 1, name: 'Paracetamol', buy_price: 10, sell_price: 15, qty: 100, unit_type: 'pcs', pieces_per_box: 1, manuf_date: '2024-01-01', expiry_date: '2026-01-01' },
+        { id: 2, name: 'Amoxicillin', buy_price: 25, sell_price: 40, qty: 50, unit_type: 'box', pieces_per_box: 10, manuf_date: '2023-06-01', expiry_date: '2025-06-01' },
+        { id: 3, name: 'Vitamin C', buy_price: 5, sell_price: 8, qty: 200, unit_type: 'pcs', pieces_per_box: 1, manuf_date: '2024-03-01', expiry_date: '2026-03-01' }
     ],
     'pharmacy_sales': [],
+    'construction_sites': [],
     'construction_expenses': [],
     'construction_income': [],
-    'construction_sites': []
+    'activity_logs': []
 };
 
-class Store {
+class AsyncStore {
     constructor() {
         this.init();
     }
 
-    init() {
+    async init() {
+        console.log('Store initialized in (Mock) Async Mode');
         // Initialize mock data if not present
-        for (const [key, value] of Object.entries(INIT_KEYS)) {
+        Object.entries(INIT_KEYS).forEach(([key, val]) => {
             if (!localStorage.getItem(key)) {
-                localStorage.setItem(key, JSON.stringify(value));
+                localStorage.setItem(key, JSON.stringify(val));
             }
-        }
+        });
+        return true;
     }
 
-    get(key) {
+    async get(key) {
+        // Simulate network delay
+        await new Promise(r => setTimeout(r, 50));
         const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : null;
+        // Special case for rates: return object, others array (mostly)
+        if (!data) return INIT_KEYS[key] || (key.includes('rates') ? {} : []);
+        return JSON.parse(data);
     }
 
-    set(key, value) {
-        localStorage.setItem(key, JSON.stringify(value));
-    }
-
-    // Helper to add mock transaction
-    add(key, item) {
-        const list = this.get(key) || [];
-        item.id = Date.now(); // Simple ID generation
-        item.date = new Date().toISOString();
+    async add(key, item) {
+        await new Promise(r => setTimeout(r, 50));
+        const list = await this.get(key) || [];
+        // Ensure it's an array
+        if (!Array.isArray(list)) {
+            console.error(`Cannot add to non-array key: ${key}`);
+            return false;
+        }
+        item.id = Date.now();
+        item.date = item.date || new Date().toISOString(); // Ensure date
         list.push(item);
-        this.set(key, list);
+        localStorage.setItem(key, JSON.stringify(list));
         return item;
+    }
+
+    async set(key, value) {
+        await new Promise(r => setTimeout(r, 50));
+        localStorage.setItem(key, JSON.stringify(value));
+        return true;
+    }
+
+    // Special Helper for Logging Activity
+    async logActivity(action, module, details) {
+        const log = {
+            id: Date.now(),
+            action_type: action,
+            module_name: module,
+            details: details,
+            timestamp: new Date().toISOString(),
+            current_user: (JSON.parse(sessionStorage.getItem('active_user') || '{}')).username || 'system'
+        };
+        await this.add('activity_logs', log);
     }
 }
 
-const store = new Store();
-window.Store = store;
+window.Store = new AsyncStore();

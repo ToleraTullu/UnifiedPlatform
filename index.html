@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unified Platform - Login</title>
-    <!-- Relative path to assets/css is just css/ if we are in root? No, we moved it to assets/css -->
     <link rel="stylesheet" href="css/style.css">
     <style>
         body {
@@ -27,6 +26,7 @@
         h1 {
             text-align: center;
             color: #1e3c72;
+            margin-bottom: 2rem;
         }
     </style>
 </head>
@@ -63,10 +63,7 @@
     const errorMsg = document.getElementById('errorMsg');
 
     function redirectUser(user) {
-        if (user.role === 'admin') window.location.href = 'admin/dashboard.html';
-        else if (user.role === 'exchange_user') window.location.href = 'modules/exchange/dashboard.html';
-        else if (user.role === 'pharmacy_user') window.location.href = 'modules/pharmacy/dashboard.html';
-        else if (user.role === 'construction_user') window.location.href = 'modules/construction/dashboard.html';
+        window.location.href = 'dashboard.html';
     }
 
     // Check active session

@@ -28,6 +28,114 @@ class App {
 
         const themeBtn = document.getElementById('themeToggle');
         if (themeBtn) themeBtn.addEventListener('click', () => this.toggleTheme());
+
+        // Mobile Sidebar Toggle
+        const mobileBtn = document.getElementById('mobileMenuBtn');
+        const sidebar = document.querySelector('.sidebar');
+        if (mobileBtn && sidebar) {
+            mobileBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+
+            // Close sidebar when clicking outside on mobile (optional but good UX)
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth <= 768 &&
+                    sidebar.classList.contains('open') &&
+                    !sidebar.contains(e.target) &&
+                    !mobileBtn.contains(e.target)) {
+                    sidebar.classList.remove('open');
+                }
+            });
+        }
+
+        // Notification Bell
+        const notifBtn = document.getElementById('notificationBtn');
+        const notifModal = document.getElementById('notification-modal');
+        if (notifBtn && notifModal) {
+            notifBtn.addEventListener('click', () => {
+                this.updateNotifications();
+                notifModal.classList.remove('hidden');
+            });
+            notifModal.querySelector('.close-notif-modal').addEventListener('click', () => {
+                notifModal.classList.add('hidden');
+            });
+        }
+
+        // Admin Dashboard Cards Redirection
+        this.initCardRedirects();
+    }
+
+    initCardRedirects() {
+        // Exchange Card
+        const exCard = document.querySelector('.card.stat-card.blue');
+        if (exCard) exCard.onclick = () => this.navigateTo('exchange-dashboard');
+        if (exCard) exCard.style.cursor = 'pointer';
+
+        // Pharmacy Card
+        const phCard = document.querySelector('.card.stat-card.green');
+        if (phCard) phCard.onclick = () => this.navigateTo('pharmacy-dashboard');
+        if (phCard) phCard.style.cursor = 'pointer';
+
+        // Construction Card
+        const coCard = document.querySelector('.card.stat-card.orange');
+        if (coCard) coCard.onclick = () => this.navigateTo('construction-dashboard');
+        if (coCard) coCard.style.cursor = 'pointer';
+    }
+
+    async updateNotifications() {
+        const list = document.getElementById('notification-list');
+        const badge = document.getElementById('notif-badge');
+        list.innerHTML = '';
+        let count = 0;
+
+        // 1. Pharmacy Low Stock
+        const stock = await window.Store.get('pharmacy_items') || [];
+        const lowStock = stock.filter(i => i.qty < 10);
+        lowStock.forEach(i => {
+            count++;
+            list.innerHTML += `
+                <li class="notif-item warning">
+                    <div>
+                        <strong>Low Stock: ${i.name}</strong><br>
+                        <small>Only ${i.qty} left</small>
+                    </div>
+                </li>
+            `;
+        });
+
+        // 2. Pharmacy Expiry Alerts
+        const today = new Date();
+        const expiring = stock.filter(i => {
+            if (!i.exp_date) return false;
+            const exp = new Date(i.exp_date);
+            const diffTime = exp - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays < 30; // Alert if less than 30 days
+        });
+
+        expiring.forEach(i => {
+            count++;
+            list.innerHTML += `
+                <li class="notif-item danger">
+                    <div>
+                        <strong>Expiring Soon: ${i.name}</strong><br>
+                        <small>Expires on ${i.exp_date}</small>
+                    </div>
+                </li>
+            `;
+        });
+
+        // 3. Recent Activities (Mock)
+        // ... could add more alerts here
+
+        if (count === 0) list.innerHTML = '<li class="empty-state">No new notifications</li>';
+
+        if (count > 0) {
+            badge.style.display = 'block';
+            badge.textContent = count;
+        } else {
+            badge.style.display = 'none';
+        }
     }
 
     initTheme() {
@@ -74,6 +182,8 @@ class App {
                     { id: 'exchange-dashboard', label: 'Dashboard', icon: '📈' },
                     { id: 'exchange-buy', label: 'Buy Currency', icon: '📥', submenu: true },
                     { id: 'exchange-sell', label: 'Sell Currency', icon: '📤', submenu: true },
+                    { id: 'exchange-holdings', label: 'Vault Holdings', icon: '🏦', submenu: true },
+                    { id: 'exchange-rates', label: 'Set Rates', icon: '⚙️', submenu: true },
                     { id: 'exchange-records', label: 'Transactions', icon: '📝', submenu: true }
                 ]
             },
@@ -100,57 +210,52 @@ class App {
             }
         ];
 
-        // Create Dropdown for Sectors
-        const sectorContainer = document.createElement('div');
-        sectorContainer.style.padding = '1rem';
-
-        const select = document.createElement('select');
-        select.className = 'form-control';
-        select.onchange = (e) => this.renderSectorItems(e.target.value);
-
-        let firstAvailable = null;
-
+        // Accordion Render
         structure.forEach((section, index) => {
             if (this.hasAccess(section.roles)) {
-                if (firstAvailable === null) firstAvailable = index;
-                const opt = document.createElement('option');
-                opt.value = index;
-                opt.textContent = section.header;
-                select.appendChild(opt);
+
+                // 1. Header
+                const catHeader = document.createElement('div');
+                catHeader.className = 'nav-category';
+                catHeader.innerHTML = `<span>${section.header}</span> <span class="arrow">▼</span>`;
+
+                // 2. Items Container
+                const itemsGroup = document.createElement('ul');
+                itemsGroup.className = 'nav-item-group';
+                if (index === 0) itemsGroup.classList.add('open'); // Expand first by default
+
+                // Toggle Logic
+                catHeader.onclick = () => {
+                    // Close others? Optional. Let's keep multiple open support.
+                    // Toggle current
+                    itemsGroup.classList.toggle('open');
+                    catHeader.classList.toggle('active-cat');
+                };
+
+                // Populate Items
+                section.items.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'menu-item';
+                    li.dataset.target = item.id;
+                    li.innerHTML = `<span class="icon">${item.icon}</span> ${item.label}`;
+                    li.onclick = () => {
+                        this.navigateTo(item.id);
+                        // Make sure parent is open
+                        if (!itemsGroup.classList.contains('open')) {
+                            itemsGroup.classList.add('open');
+                            catHeader.classList.add('active-cat');
+                        }
+                        // Mobile: Close sidebar on selection
+                        if (window.innerWidth <= 768) {
+                            document.querySelector('.sidebar').classList.remove('open');
+                        }
+                    };
+                    itemsGroup.appendChild(li);
+                });
+
+                sidebar.appendChild(catHeader);
+                sidebar.appendChild(itemsGroup);
             }
-        });
-
-        sectorContainer.appendChild(select);
-
-        // Items Container
-        const itemsContainer = document.createElement('ul');
-        itemsContainer.id = 'sidebar-items-container';
-
-        sidebar.appendChild(sectorContainer);
-        sidebar.appendChild(itemsContainer);
-
-        // Store structure for re-rendering
-        this.menuStructure = structure;
-
-        // Initial Render
-        if (firstAvailable !== null) this.renderSectorItems(firstAvailable);
-    }
-
-    renderSectorItems(sectionIndex) {
-        const container = document.getElementById('sidebar-items-container');
-        if (!container || !this.menuStructure) return;
-
-        container.innerHTML = '';
-        const section = this.menuStructure[sectionIndex];
-
-        section.items.forEach(item => {
-            const li = document.createElement('li');
-            li.className = 'menu-item';
-            if (item.submenu) li.classList.add('submenu-item');
-            li.dataset.target = item.id;
-            li.innerHTML = `<span class="icon">${item.icon}</span> ${item.label}`;
-            li.onclick = () => this.navigateTo(item.id);
-            container.appendChild(li);
         });
     }
 
@@ -196,25 +301,25 @@ class App {
         if (module === 'construction' && window.ConstructionModule) window.ConstructionModule.onViewLoad(action);
     }
 
-    renderAdminDashboard() {
+    async renderAdminDashboard() {
         // Aggregation Logic for Admin
-        if (window.ExchangeModule) window.ExchangeModule.updateStats();
-        if (window.PharmacyModule) window.PharmacyModule.updateStats();
-        if (window.ConstructionModule) window.ConstructionModule.updateStats();
+        if (window.ExchangeModule) await window.ExchangeModule.updateStats();
+        if (window.PharmacyModule) await window.PharmacyModule.updateStats();
+        if (window.ConstructionModule) await window.ConstructionModule.updateStats();
 
         // Calculate Net Platform Profit (Estimate)
         // Exchange: Estimate profit as 1% of volume (mock logic) or just use volume for now?
         // Let's use: Pharmacy Sales + Construction Balance + (Exchange Volume * 0.01)
 
-        const exTx = window.Store.get('exchange_transactions') || [];
+        const exTx = await window.Store.get('exchange_transactions') || [];
         const exVol = exTx.reduce((a, c) => a + (c.amount * c.rate), 0);
         const exProfit = exVol * 0.02; // Assume 2% spread revenue
 
-        const phTx = window.Store.get('pharmacy_sales') || [];
+        const phTx = await window.Store.get('pharmacy_sales') || [];
         const phRev = phTx.reduce((a, c) => a + c.total, 0); // Revenue, not profit, but approx for now
 
-        const coExp = window.Store.get('construction_expenses') || [];
-        const coInc = window.Store.get('construction_income') || [];
+        const coExp = await window.Store.get('construction_expenses') || [];
+        const coInc = await window.Store.get('construction_income') || [];
         const coBal = coInc.reduce((a, c) => a + c.amount, 0) - coExp.reduce((a, c) => a + c.amount, 0);
 
         const netProfit = exProfit + phRev + coBal;
@@ -222,7 +327,7 @@ class App {
         const npEl = document.getElementById('stat-net-profit');
         if (npEl) npEl.textContent = netProfit.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
-        this.renderActivityStream();
+        await this.renderActivityStream();
     }
 
     renderAdminAnalytics() {
@@ -241,7 +346,7 @@ class App {
         }
     }
 
-    renderActivityStream() {
+    async renderActivityStream() {
         const streamContainer = document.getElementById('activity-stream');
         if (!streamContainer) return;
 
@@ -249,7 +354,7 @@ class App {
         let activities = [];
 
         // Exchange
-        const exTx = window.Store.get('exchange_transactions') || [];
+        const exTx = await window.Store.get('exchange_transactions') || [];
         activities = activities.concat(exTx.map(t => ({
             time: t.date,
             desc: `Exchange: ${t.type.toUpperCase()} ${t.currency} ${t.amount}`,
@@ -257,7 +362,7 @@ class App {
         })));
 
         // Pharmacy
-        const phTx = window.Store.get('pharmacy_sales') || [];
+        const phTx = await window.Store.get('pharmacy_sales') || [];
         activities = activities.concat(phTx.map(t => ({
             time: t.date ? t.date : new Date().toISOString(), // fallback
             desc: `Pharmacy: Sale of $${t.total.toFixed(2)}`,
@@ -265,8 +370,8 @@ class App {
         })));
 
         // Construction
-        const coExp = window.Store.get('construction_expenses') || [];
-        const coInc = window.Store.get('construction_income') || [];
+        const coExp = await window.Store.get('construction_expenses') || [];
+        const coInc = await window.Store.get('construction_income') || [];
         activities = activities.concat(coExp.map(t => ({
             time: t.date, desc: `Construction: Expense - ${t.description}`, type: 'construction'
         })));

@@ -29,14 +29,20 @@
         <main class="main-content">
             <!-- Header -->
             <header class="topbar">
-                <h2 id="page-title">Dashboard</h2>
+                <div style="display: flex; align-items: center;">
+                    <button id="mobileMenuBtn" class="hamburger">☰</button>
+                    <h2 id="page-title">Dashboard</h2>
+                </div>
                 <div class="user-info">
-                    <div class="user-info">
-                        <button id="themeToggle" class="theme-toggle" title="Toggle Dark Mode">🌙</button>
-                        <span id="displayUsername" class="username">User</span>
-                        <span id="displayRole" class="role-badge">Role</span>
-                        <button id="logoutBtn" class="logout-btn">Logout</button>
-                    </div>
+                    <button id="notificationBtn" class="theme-toggle" style="position:relative; margin-right:10px;">
+                        🔔 <span id="notif-badge"
+                            style="display:none; position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:0.6rem; padding:2px 5px; border-radius:50%;">0</span>
+                    </button>
+                    <button id="themeToggle" class="theme-toggle" title="Toggle Dark Mode">🌙</button>
+                    <span id="displayUsername" class="username">User</span>
+                    <span id="displayRole" class="role-badge">Role</span>
+                    <button id="logoutBtn" class="logout-btn">Logout</button>
+                </div>
             </header>
 
             <!-- Content Body -->
@@ -227,10 +233,9 @@
                     <h3>Exchange Dashboard</h3>
 
                     <div class="action-bar" style="margin-bottom: 2rem;">
-                        <button class="btn-primary" onclick="window.App.navigateTo('exchange-buy')">Record Buy (Stock
-                            In)</button>
-                        <button class="btn-success" onclick="window.App.navigateTo('exchange-sell')">Record Sell (Stock
-                            Out)</button>
+                        <button class="btn-primary" id="btn-nav-ex-buy">Record Buy (Stock In)</button>
+                        <button class="btn-success" id="btn-nav-ex-sell">Record Sell (Stock Out)</button>
+                        <button class="btn-secondary" id="btn-nav-ex-holdings">View Holdings</button>
                     </div>
 
                     <div class="dashboard-grid four-col">
@@ -250,6 +255,40 @@
                             <h4>EUR Sell</h4>
                             <p id="ex-sell-eur">0</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- 1b. Holdings View (New) -->
+                <div id="view-exchange-holdings" class="view-section hidden">
+                    <h3>Vault Holdings</h3>
+                    <div class="dashboard-grid">
+                        <div class="card">
+                            <h4>USD in Vault</h4>
+                            <p id="ex-holdings-usd">0.00</p>
+                            <small class="text-muted">Net vs Initial</small>
+                        </div>
+                        <div class="card">
+                            <h4>EUR in Vault</h4>
+                            <p id="ex-holdings-eur">0.00</p>
+                        </div>
+                        <div class="card">
+                            <h4>GBP in Vault</h4>
+                            <p id="ex-holdings-gbp">0.00</p>
+                        </div>
+                        <div class="card">
+                            <h4>Local Currency Reserve</h4>
+                            <p id="ex-holdings-local">0.00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1c. Set Rates View (New) -->
+                <div id="view-exchange-rates" class="view-section hidden">
+                    <h3>Exchange Rates Configuration</h3>
+                    <div class="form-container card">
+                        <form id="exchange-rates-form">
+                            <!-- Injected by JS -->
+                        </form>
                     </div>
                 </div>
 
@@ -323,23 +362,20 @@
                                 <label>Quantity</label>
                                 <input type="number" id="pos-qty" value="1" min="1">
                             </div>
-                            <button class="btn-success full-width" onclick="window.PharmacyModule.addToCart()">Add to
-                                Cart</button>
+                            <button class="btn-success full-width" id="btn-pos-add">Add to Cart</button>
                         </div>
                         <div class="card pos-right">
                             <h3>Current Cart</h3>
                             <ul id="pos-cart-list" class="cart-list"></ul>
                             <div class="cart-total">Total: <span id="pos-total">0.00</span></div>
-                            <button class="btn-primary full-width" onclick="window.PharmacyModule.checkout()">Complete
-                                Sale</button>
+                            <button class="btn-primary full-width" id="btn-pos-checkout">Complete Sale</button>
                         </div>
                     </div>
                 </div>
 
                 <div id="view-pharmacy-stock" class="view-section hidden">
                     <div class="action-bar">
-                        <button class="btn-primary" onclick="window.PharmacyModule.openStockModal()">+ Add New
-                            Item</button>
+                        <button class="btn-primary" id="btn-stock-add">+ Add New Item</button>
                     </div>
                     <div class="card">
                         <table class="data-table">
@@ -462,8 +498,7 @@
                 <div id="view-construction-sites" class="view-section hidden">
                     <h3>Manage Sites</h3>
                     <div class="action-bar">
-                        <button class="btn-primary" onclick="window.ConstructionModule.openAddSiteModal()">+ Add New
-                            Site</button>
+                        <button class="btn-primary" id="btn-site-add">+ Add New Site</button>
                     </div>
                     <div class="dashboard-grid">
                         <div class="card" style="grid-column: 1 / -1;">
@@ -495,6 +530,18 @@
         </div>
     </div>
 
+    <!-- Notification Modal -->
+    <div id="notification-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-notif-modal"
+                style="position:absolute; top:1rem; right:1rem; cursor:pointer; font-size:1.5rem;">&times;</span>
+            <h2>Notifications</h2>
+            <ul id="notification-list" style="list-style:none; padding:0; margin-top:1rem;">
+                <li class="empty-state">No new notifications</li>
+            </ul>
+        </div>
+    </div>
+    
     <script src="js/store.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/app.js"></script>

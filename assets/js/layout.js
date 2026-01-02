@@ -1,17 +1,21 @@
 /**
  * Layout.js
- * Injects shared UI (Sidebar, Topbar) into pages.
- * Handles relative path adjustments for links.
+ * Handles Sidebar, Topbar, and Navigation
  */
 
 class Layout {
     constructor() {
         this.basePath = this.determineBasePath();
-        this.ensureLayoutContainers();
-        this.renderSidebar();
-        this.renderTopbar();
-        this.highlightActivePage();
-        this.checkAuth();
+        // this.checkAuth(); // Auth check is good
+    }
+
+    determineBasePath() {
+        // Simple heuristic: count how many levels deep we are relative to the root 'UnifiedPlatform'
+        // If we in 'modules/exchange/buy.html', we are 2 deep? 
+        if (window.location.href.includes('/modules/')) return '../../';
+        if (window.location.href.includes('/admin/')) return '../';
+        // fallback
+        return '';
     }
 
     ensureLayoutContainers() {
@@ -52,25 +56,6 @@ class Layout {
             // append main
             document.body.appendChild(main);
         }
-    }
-
-    determineBasePath() {
-        // Simple heuristic: count how many levels deep we are relative to the root 'UnifiedPlatform'
-        // If we serve via file://, location.pathname is full path.
-        // We assume structure: 
-        // root/index.html (depth 0)
-        // root/admin/dash.html (depth 1)
-        // root/modules/exch/dash.html (depth 2)
-
-        // Better approach: scripts are loaded with a relative path in the HTML.
-        // We can just rely on the fact that if this script is loaded, we can infer paths based on where 'assets' is.
-        // But for generating LINKS in the sidebar, we need to know "Up X levels".
-
-        // Let's rely on a global config or the script tag source.
-        // Quick hack: check if we are in 'modules' or 'admin'
-        if (window.location.href.includes('/modules/')) return '../../';
-        if (window.location.href.includes('/admin/')) return '../';
-        return './';
     }
 
     checkAuth() {
@@ -130,7 +115,7 @@ class Layout {
                 items: [
                     { label: 'Dashboard', icon: '📈', link: 'modules/exchange/dashboard.html' },
                     { label: 'Holdings', icon: '💼', link: 'modules/exchange/stock.html' },
-                        { label: 'Manage Rates', icon: '⚙️', link: 'modules/exchange/manage.html', adminOnly: true },
+                    { label: 'Manage Rates', icon: '⚙️', link: 'modules/exchange/manage.html', adminOnly: true },
                     { label: 'Buy Currency', icon: '📥', link: 'modules/exchange/buy.html' },
                     { label: 'Sell Currency', icon: '📤', link: 'modules/exchange/sell.html' },
                     { label: 'Transactions', icon: '📝', link: 'modules/exchange/records.html' }
@@ -162,7 +147,7 @@ class Layout {
             if (hasAccess(section.roles)) {
                 if (section.header) {
                     const h = document.createElement('li');
-                    h.className = 'menu-category';
+                    h.className = 'menu-category'; 
                     h.textContent = section.header;
                     menuCtx.appendChild(h);
                 }
@@ -251,126 +236,6 @@ class Layout {
     }
 
     initNotifications() {
-        const notificationBtn = document.getElementById('notificationBtn');
-        const notificationCount = document.getElementById('notificationCount');
-        if (!notificationBtn) return;
-
-        // Create notification dropdown
-        const dropdown = document.createElement('div');
-        dropdown.id = 'notificationDropdown';
-        dropdown.style.cssText = `
-            position: absolute;
-            top: 60px;
-            right: 20px;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            width: 350px;
-            max-height: 400px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-        `;
-        document.body.appendChild(dropdown);
-
-        // Toggle dropdown
-        notificationBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const isVisible = dropdown.style.display === 'block';
-            dropdown.style.display = isVisible ? 'none' : 'block';
-        });
-
-        // Close on outside click
-        document.addEventListener('click', (e) => {
-            if (!dropdown.contains(e.target) && e.target !== notificationBtn) {
-                dropdown.style.display = 'none';
-            }
-        });
-
-        // Load notifications
-        this.loadNotifications(dropdown, notificationCount);
-    }
-
-    loadNotifications(dropdown, countEl) {
-        const user = JSON.parse(sessionStorage.getItem('active_user') || '{}');
-        const userRole = user.role;
-
-        // All possible notifications with business categories
-        const allNotifications = [
-            { type: 'warning', message: 'Low stock alert: Paracetamol (5 units remaining)', time: '2 hours ago', business: 'pharmacy' },
-            { type: 'info', message: 'Construction project "Project A" deadline approaching in 3 days', time: '5 hours ago', business: 'construction' },
-            { type: 'alert', message: 'Currency rate fluctuation: USD/INR changed by 2.5%', time: '1 day ago', business: 'exchange' },
-            { type: 'success', message: 'Monthly sales target achieved for Pharmacy', time: '2 days ago', business: 'pharmacy' },
-            { type: 'warning', message: 'Low stock alert: Aspirin (2 units remaining)', time: '4 hours ago', business: 'pharmacy' },
-            { type: 'info', message: 'Construction project "Project B" deadline approaching in 5 days', time: '6 hours ago', business: 'construction' },
-            { type: 'alert', message: 'Currency rate fluctuation: EUR/USD changed by 1.8%', time: '2 days ago', business: 'exchange' },
-            { type: 'success', message: 'Exchange monthly volume target exceeded', time: '3 days ago', business: 'exchange' }
-        ];
-
-        // Filter notifications based on user role
-        let notifications = [];
-        if (userRole === 'admin') {
-            // Admin sees all notifications
-            notifications = allNotifications;
-        } else if (userRole === 'exchange_user') {
-            // Exchange user sees only exchange notifications
-            notifications = allNotifications.filter(n => n.business === 'exchange');
-        } else if (userRole === 'pharmacy_user') {
-            // Pharmacy user sees only pharmacy notifications
-            notifications = allNotifications.filter(n => n.business === 'pharmacy');
-        } else if (userRole === 'construction_user') {
-            // Construction user sees only construction notifications
-            notifications = allNotifications.filter(n => n.business === 'construction');
-        }
-
-        dropdown.innerHTML = `
-            <div style="padding: 15px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">Notifications</div>
-            ${notifications.length > 0 ? notifications.map(n => `
-                <div style="padding: 12px 15px; border-bottom: 1px solid #f1f5f9; cursor: pointer;" class="notification-item">
-                    <div style="font-size: 0.9rem; margin-bottom: 4px;">${n.message}</div>
-                    <div style="font-size: 0.8rem; color: #64748b;">${n.time}</div>
-                </div>
-            `).join('') : '<div style="padding: 20px; text-align: center; color: #64748b;">No notifications</div>'}
-        `;
-
-        // Update count
-        const unreadCount = notifications.filter(n => n.type !== 'success').length; // Assume success are read
-        if (unreadCount > 0) {
-            countEl.textContent = unreadCount;
-            countEl.style.display = 'inline';
-        } else {
-            countEl.style.display = 'none';
-        }
-    }
-
-    highlightActivePage() {
-        // Naive check: matches filename
-        const currentPath = window.location.pathname;
-        const links = document.querySelectorAll('.menu-item');
-        links.forEach(link => {
-            // Check if link href matches end of current path
-            // href might be "../../modules/ex..." vs path ".../modules/ex..."
-            // simplified:
-            const hrefFile = link.getAttribute('href').split('/').pop();
-            const currFile = currentPath.split('/').pop();
-
-            // Also check folder to differentiate dashboards
-            // href: ../../modules/exchange/dashboard.html
-            // path: .../modules/exchange/dashboard.html
-
-            // Just comparing the full relative href against the end of the location path is tricky.
-            // Let's compare "modules/exchange/dashboard.html"
-
-            // If the relative part matches
-            // This is purely visual, can be imperfect
-            if (link.href === window.location.href) {
-                link.classList.add('active');
-            }
-        });
+        // Stub
     }
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    window.Layout = new Layout();
-});

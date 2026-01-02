@@ -1,45 +1,41 @@
 <?php
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json; charset=UTF-8");
+
 require_once 'data_store.php';
 
-$method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
+$store = new DataStore();
 
-// --- TRANSACTIONS ---
-if ($action === 'transactions') {
-    if ($method === 'GET') {
-        $data = getJsonData('exchange_transactions');
-        sendResponse($data);
-    } elseif ($method === 'POST') {
-        $newItem = json_decode(file_get_contents('php://input'), true);
-        $list = getJsonData('exchange_transactions');
-
-        $newItem['id'] = time();
-        $newItem['date'] = date('c');
-        $list[] = $newItem;
-
-        saveJsonData('exchange_transactions', $list);
-        sendResponse(['success' => true]);
-    }
-}
-
-// --- RATES ---
 if ($action === 'rates') {
-    if ($method === 'GET') {
-        $data = getJsonData('exchange_rates');
-        // Default seed if empty
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $rates = json_decode(file_get_contents("php://input"), true);
+        if ($store->save('exchange_rates', $rates)) {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false]);
+        }
+    } else {
+        $data = $store->get('exchange_rates');
+        // Initial Seed if empty
         if (empty($data)) {
             $data = [
-                ['code' => 'USD', 'buy' => 1.0, 'sell' => 1.02],
-                ['code' => 'EUR', 'buy' => 0.9, 'sell' => 0.92],
-                ['code' => 'GBP', 'buy' => 0.8, 'sell' => 0.82]
+                'USD' => ['buy_rate' => 1.0, 'sell_rate' => 1.02],
+                'EUR' => ['buy_rate' => 0.9, 'sell_rate' => 0.92]
             ];
-            saveJsonData('exchange_rates', $data);
+            $store->save('exchange_rates', $data);
         }
-        sendResponse($data);
-    } elseif ($method === 'POST') {
-        $data = json_decode(file_get_contents('php://input'), true);
-        saveJsonData('exchange_rates', $data);
-        sendResponse(['success' => true]);
+        echo json_encode($data);
     }
+} elseif ($action === 'transactions') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $item = json_decode(file_get_contents("php://input"), true);
+        $res = $store->add('exchange_transactions', $item);
+        echo json_encode($res);
+    } else {
+        echo json_encode($store->get('exchange_transactions'));
+    }
+} else {
+    echo json_encode([]);
 }
 ?>

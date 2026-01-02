@@ -1,29 +1,34 @@
 <?php
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json; charset=UTF-8");
+
 require_once 'data_store.php';
 
-$method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
+$store = new DataStore();
 
-// Generic Handler for Sites, Expenses, Income
-$validActions = ['sites', 'expenses', 'income'];
-
-if (in_array($action, $validActions)) {
-    $filename = 'construction_' . $action;
-
-    if ($method === 'GET') {
-        $data = getJsonData($filename);
-        sendResponse($data);
-    } elseif ($method === 'POST') {
-        $newItem = json_decode(file_get_contents('php://input'), true);
-        $list = getJsonData($filename);
-
-        $newItem['id'] = time();
-        if (!isset($newItem['date']))
-            $newItem['date'] = date('c');
-
-        $list[] = $newItem;
-        saveJsonData($filename, $list);
-        sendResponse(['success' => true]);
+if ($action === 'sites') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $item = json_decode(file_get_contents("php://input"), true);
+        echo json_encode($store->add('construction_sites', $item));
+    } else {
+        echo json_encode($store->get('construction_sites'));
     }
+} elseif ($action === 'expenses') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $item = json_decode(file_get_contents("php://input"), true);
+        echo json_encode($store->add('construction_expenses', $item));
+    } else {
+        echo json_encode($store->get('construction_expenses'));
+    }
+} elseif ($action === 'income') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $item = json_decode(file_get_contents("php://input"), true);
+        echo json_encode($store->add('construction_income', $item));
+    } else {
+        echo json_encode($store->get('construction_income'));
+    }
+} else {
+    echo json_encode([]);
 }
 ?>

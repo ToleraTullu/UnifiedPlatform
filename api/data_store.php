@@ -1,42 +1,52 @@
 <?php
-// api/data_store.php
+/**
+ * DataStore.php
+ * Simple JSON-based data store helper
+ */
 
-// Ensure data directory exists
-$dataDir = __DIR__ . '/../data';
-if (!file_exists($dataDir)) {
-    mkdir($dataDir, 0777, true);
-}
+class DataStore
+{
+    private $dataDir;
 
-function getJsonData($filename) {
-    global $dataDir;
-    $path = $dataDir . '/' . $filename . '.json';
-    if (!file_exists($path)) {
-        return [];
+    public function __construct()
+    {
+        // Assume 'data' folder is one level up from 'api'
+        $this->dataDir = __DIR__ . '/../data/';
+        if (!file_exists($this->dataDir)) {
+            mkdir($this->dataDir, 0777, true);
+        }
     }
-    $json = file_get_contents($path);
-    return json_decode($json, true) ?? [];
-}
 
-function saveJsonData($filename, $data) {
-    global $dataDir;
-    $path = $dataDir . '/' . $filename . '.json';
-    file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT));
-}
+    public function get($key)
+    {
+        $file = $this->dataDir . $key . '.json';
+        if (!file_exists($file))
+            return [];
+        $content = file_get_contents($file);
+        return json_decode($content, true) ?: [];
+    }
 
-// Send JSON Response
-function sendResponse($data, $code = 200) {
-    http_response_code($code);
-    header('Content-Type: application/json');
-    echo json_encode($data);
-    exit;
-}
+    public function save($key, $data)
+    {
+        $file = $this->dataDir . $key . '.json';
+        file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
+        return true;
+    }
 
-// Handle CORS (simulated)
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+    public function add($key, $item)
+    {
+        $data = $this->get($key);
+        // Ensure data is array
+        if (!is_array($data))
+            $data = [];
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    exit; // Preflight
+        // Add ID if missing
+        if (!isset($item['id'])) {
+            $item['id'] = time() . rand(100, 999);
+        }
+
+        $data[] = $item;
+        $this->save($key, $data);
+        return $item; // Return added item with ID
+    }
 }
-?>

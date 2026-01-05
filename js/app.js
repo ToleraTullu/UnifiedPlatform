@@ -302,7 +302,7 @@ class App {
         }
     }
 
-    handleViewLoad(viewId) {
+    async handleViewLoad(viewId) {
         // Trigger specific logic when a view loads
         const [module, action] = viewId.split('-'); // e.g., 'exchange-buy' -> module='exchange', action='buy'
 
@@ -310,15 +310,15 @@ class App {
 
         if (module === 'admin') {
             if (action === 'overview') {
-                this.renderAdminDashboard();
+                await this.renderAdminDashboard();
             } else if (action === 'analytics') {
-                this.renderAdminAnalytics();
+                await this.renderAdminAnalytics();
             } else if (action === 'users' && window.AdminModule) {
-                window.AdminModule.initUsers();
+                await window.AdminModule.initUsers();
             } else if (action === 'banks' && window.AdminModule) {
-                window.AdminModule.initBanks();
+                await window.AdminModule.initBanks();
             } else if (action === 'logs' && window.AdminModule) {
-                window.AdminModule.initLogs();
+                await window.AdminModule.initLogs();
             }
         }
 
@@ -357,19 +357,20 @@ class App {
         await this.renderActivityStream();
     }
 
-    renderAdminAnalytics() {
+    async renderAdminAnalytics() {
         // Load analytics script if not already loaded
-        if (!window.Analytics) {
+        if (!window.Analytics || !window.Analytics.renderAnalytics) {
             const script = document.createElement('script');
             script.src = 'js/analytics.js';
-            script.onload = () => {
-                if (window.Analytics && window.Analytics.renderAnalytics) {
-                    window.Analytics.renderAnalytics();
+            script.onload = async () => {
+                if (window.Analytics) {
+                    await window.Analytics.init();
+                    await window.Analytics.renderAnalytics();
                 }
             };
             document.head.appendChild(script);
         } else {
-            window.Analytics.renderAnalytics();
+            await window.Analytics.renderAnalytics();
         }
     }
 

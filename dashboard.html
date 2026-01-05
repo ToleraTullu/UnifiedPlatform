@@ -518,6 +518,90 @@
                 </div>
 
                 <!-- ================= ADMIN MANAGEMENT ================= -->
+                <!-- 0. Reports & Analytics -->
+                <div id="view-admin-analytics" class="view-section hidden">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+                        <h2 style="margin:0">Platform Performance & Analytics</h2>
+                        <div style="display:flex; gap:12px; align-items:center;">
+                            <select id="analytics-period" class="form-control" style="width:180px;">
+                                <option value="7">Last 7 Days</option>
+                                <option value="30" selected>Last 30 Days</option>
+                                <option value="90">Last 90 Days</option>
+                                <option value="365">Last Year</option>
+                            </select>
+                            <button id="export-analytics-btn" class="btn-primary">Export Report</button>
+                        </div>
+                    </div>
+
+                    <!-- KPI Grid -->
+                    <div class="dashboard-grid four-col">
+                        <div class="card stat-card blue">
+                            <div class="stat-label">Total Platform Revenue</div>
+                            <div class="stat-value" id="analytics-total-revenue">$0.00</div>
+                            <div class="stat-change" id="analytics-total-revenue-change" style="font-size:0.8rem; margin-top:5px;">Loading...</div>
+                        </div>
+                        <div class="card stat-card blue">
+                            <div class="stat-label">Exchange Volume</div>
+                            <div class="stat-value" id="analytics-exchange-volume">$0.00</div>
+                            <div class="stat-change" id="analytics-exchange-volume-change" style="font-size:0.8rem; margin-top:5px;">Loading...</div>
+                        </div>
+                        <div class="card stat-card green">
+                            <div class="stat-label">Pharmacy Sales</div>
+                            <div class="stat-value" id="analytics-pharmacy-sales">$0.00</div>
+                            <div class="stat-change" id="analytics-pharmacy-sales-change" style="font-size:0.8rem; margin-top:5px;">Loading...</div>
+                        </div>
+                        <div class="card stat-card orange">
+                            <div class="stat-label">Construction Balance</div>
+                            <div class="stat-value" id="analytics-construction-profit">$0.00</div>
+                            <div class="stat-change" id="analytics-construction-profit-change" style="font-size:0.8rem; margin-top:5px;">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="grid-layout" style="grid-template-columns: 2fr 1fr; margin-top:2rem;">
+                        <div class="card">
+                            <h3>Revenue Trend</h3>
+                            <div style="height:350px; position:relative;">
+                                <canvas id="revenue-trend-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3>Sector Performance</h3>
+                            <div style="height:350px; position:relative;">
+                                <canvas id="module-performance-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Breakdown -->
+                    <div class="grid-layout" style="grid-template-columns: 1fr 2fr; margin-top:2rem;">
+                        <div class="card">
+                            <h3>Top Performers</h3>
+                            <div id="top-items-list" class="activity-stream" style="max-height:400px; overflow-y:auto;">
+                                <!-- Top items loaded via JS -->
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3>Transaction Summary</h3>
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Module</th>
+                                            <th>Tx Count</th>
+                                            <th>Volume</th>
+                                            <th>Avg. Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="transaction-summary-body">
+                                        <!-- Data loaded via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 1. User Management -->
                 <div id="view-admin-users" class="view-section hidden">
                     <div class="grid-layout">

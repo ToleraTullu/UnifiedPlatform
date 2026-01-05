@@ -7,35 +7,32 @@ class Analytics {
     constructor() {
         this.currentPeriod = 30; // days
         this.charts = {};
-        this.init();
     }
 
-    init() {
+    async init() {
+        // Initial load of library and data
         this.loadChartLibrary();
     }
 
     loadChartLibrary() {
-        // Load Chart.js for visualizations
         if (!window.Chart) {
             const script = document.createElement('script');
             script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-            script.onload = () => this.initCharts();
+            script.onload = () => {
+                console.log('Chart.js loaded');
+                // No need to auto-init, App.js calls renderAnalytics
+            };
             document.head.appendChild(script);
-        } else {
-            this.initCharts();
         }
     }
 
-    initCharts() {
-        // Charts will be initialized when the analytics view is loaded
-    }
-
-    renderAnalytics() {
+    async renderAnalytics() {
+        console.log('Rendering Analytics...');
         this.updatePeriodSelector();
-        this.calculateMetrics();
-        this.renderCharts();
-        this.renderTopItems();
-        this.renderTransactionSummary();
+        await this.calculateMetrics();
+        await this.renderCharts();
+        await this.renderTopItems();
+        await this.renderTransactionSummary();
         this.setupEventListeners();
     }
 
@@ -46,23 +43,21 @@ class Analytics {
         }
     }
 
-    calculateMetrics() {
+    async calculateMetrics() {
         const now = new Date();
         const periodStart = new Date(now.getTime() - (this.currentPeriod * 24 * 60 * 60 * 1000));
         const previousPeriodStart = new Date(periodStart.getTime() - (this.currentPeriod * 24 * 60 * 60 * 1000));
 
-        // Calculate current period metrics
-        const currentMetrics = this.getMetricsForPeriod(periodStart, now);
-        const previousMetrics = this.getMetricsForPeriod(previousPeriodStart, periodStart);
+        const currentMetrics = await this.getMetricsForPeriod(periodStart, now);
+        const previousMetrics = await this.getMetricsForPeriod(previousPeriodStart, periodStart);
 
-        // Update display
         this.updateMetricDisplay('analytics-total-revenue', currentMetrics.totalRevenue, previousMetrics.totalRevenue);
         this.updateMetricDisplay('analytics-exchange-volume', currentMetrics.exchangeVolume, previousMetrics.exchangeVolume);
         this.updateMetricDisplay('analytics-pharmacy-sales', currentMetrics.pharmacySales, previousMetrics.pharmacySales);
         this.updateMetricDisplay('analytics-construction-profit', currentMetrics.constructionProfit, previousMetrics.constructionProfit);
     }
 
-    getMetricsForPeriod(startDate, endDate) {
+    async getMetricsForPeriod(startDate, endDate) {
         const metrics = {
             totalRevenue: 0,
             exchangeVolume: 0,
@@ -70,55 +65,50 @@ class Analytics {
             constructionProfit: 0
         };
 
-        // Exchange metrics
-        const exchangeTx = window.Store.get('exchange_transactions') || [];
+        // 1. Exchange
+        const exchangeTx = await window.Store.get('exchange_transactions') || [];
         exchangeTx.forEach(tx => {
             const txDate = new Date(tx.date);
             if (txDate >= startDate && txDate <= endDate) {
-                const amount = tx.amount * tx.rate;
-                metrics.exchangeVolume += amount;
-                metrics.totalRevenue += amount * 0.02; // 2% spread
+                const vol = parseFloat(tx.total || 0);
+                metrics.exchangeVolume += vol;
+                metrics.totalRevenue += vol * 0.02; // 2% markup estimate
             }
         });
 
-        // Pharmacy metrics
-        const pharmacySales = window.Store.get('pharmacy_sales') || [];
+        // 2. Pharmacy
+        const pharmacySales = await window.Store.get('pharmacy_sales') || [];
         pharmacySales.forEach(sale => {
             const saleDate = new Date(sale.date);
             if (saleDate >= startDate && saleDate <= endDate) {
                 metrics.pharmacySales += sale.total;
-                metrics.totalRevenue += sale.total;
+                metrics.totalRevenue += sale.total * 0.25; // 25% profit margin estimate
             }
         });
 
-        // Construction metrics
-        const constructionIncome = window.Store.get('construction_income') || [];
-        const constructionExpenses = window.Store.get('construction_expenses') || [];
+        // 3. Construction
+        const constructionIncome = await window.Store.get('construction_income') || [];
+        const constructionExpenses = await window.Store.get('construction_expenses') || [];
 
-        let income = 0, expenses = 0;
+        let incVal = 0, expVal = 0;
         constructionIncome.forEach(inc => {
             const incDate = new Date(inc.date);
-            if (incDate >= startDate && incDate <= endDate) {
-                income += inc.amount;
-            }
+            if (incDate >= startDate && incDate <= endDate) incVal += inc.amount;
         });
-
         constructionExpenses.forEach(exp => {
             const expDate = new Date(exp.date);
-            if (expDate >= startDate && expDate <= endDate) {
-                expenses += exp.amount;
-            }
+            if (expDate >= startDate && expDate <= endDate) expVal += exp.amount;
         });
 
-        metrics.constructionProfit = income - expenses;
-        metrics.totalRevenue += metrics.constructionProfit;
+        metrics.constructionProfit = incVal - expVal;
+        metrics.totalRevenue += Math.max(0, metrics.constructionProfit); // Add to revenue if profitable
 
         return metrics;
     }
 
     updateMetricDisplay(elementId, currentValue, previousValue) {
         const element = document.getElementById(elementId);
-        const changeElement = document.getElementById(elementId.replace('-', '-') + '-change');
+        const changeElement = document.getElementById(elementId + '-change');
 
         if (element) {
             element.textContent = currentValue.toLocaleString(undefined, {
@@ -128,336 +118,222 @@ class Analytics {
         }
 
         if (changeElement) {
-            const change = previousValue !== 0 ? ((currentValue - previousValue) / previousValue) * 100 : 0;
-            const changeText = change >= 0 ? `+${change.toFixed(1)}%` : `${change.toFixed(1)}%`;
-            changeElement.textContent = `${changeText} from last period`;
-            changeElement.style.color = change >= 0 ? 'var(--success)' : 'var(--danger)';
+            const change = previousValue !== 0 ? ((currentValue - previousValue) / Math.abs(previousValue)) * 100 : 0;
+            const isPos = change >= 0;
+            changeElement.innerHTML = `<span style="color:${isPos ? 'var(--success)' : 'var(--danger)'}">
+                ${isPos ? '↑' : '↓'} ${Math.abs(change).toFixed(1)}%</span> from last period`;
         }
     }
 
-    renderCharts() {
-        this.renderRevenueTrendChart();
-        this.renderModulePerformanceChart();
+    async renderCharts() {
+        if (!window.Chart) return setTimeout(() => this.renderCharts(), 500);
+        await this.renderRevenueTrendChart();
+        await this.renderModulePerformanceChart();
     }
 
-    renderRevenueTrendChart() {
+    async renderRevenueTrendChart() {
         const ctx = document.getElementById('revenue-trend-chart');
         if (!ctx) return;
 
-        // Generate data for the last 30 days
-        const data = this.generateTrendData(30);
+        const data = await this.generateTrendData(this.currentPeriod);
 
-        if (this.charts.revenueTrend) {
-            this.charts.revenueTrend.destroy();
-        }
+        if (this.charts.revenueTrend) this.charts.revenueTrend.destroy();
 
         this.charts.revenueTrend = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: data.labels,
                 datasets: [{
-                    label: 'Total Revenue',
+                    label: 'Platform Revenue',
                     data: data.revenue,
-                    borderColor: 'var(--primary)',
-                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                    tension: 0.4
+                    borderColor: '#4f46e5',
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    fill: true,
+                    tension: 0.3
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return '$' + value.toLocaleString();
-                            }
-                        }
-                    }
+                    y: { beginAtZero: true, ticks: { callback: v => '$' + v.toLocaleString() } }
                 }
             }
         });
     }
 
-    renderModulePerformanceChart() {
+    async renderModulePerformanceChart() {
         const ctx = document.getElementById('module-performance-chart');
         if (!ctx) return;
 
-        const data = this.getModulePerformanceData();
+        const data = await this.getModulePerformanceData();
 
-        if (this.charts.modulePerformance) {
-            this.charts.modulePerformance.destroy();
-        }
+        if (this.charts.modulePerformance) this.charts.modulePerformance.destroy();
 
         this.charts.modulePerformance = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: data.labels,
+                labels: ['Exchange', 'Pharmacy', 'Construction'],
                 datasets: [{
                     data: data.values,
-                    backgroundColor: [
-                        'var(--primary)',
-                        'var(--success)',
-                        'var(--warning)',
-                        'var(--danger)'
-                    ]
+                    backgroundColor: ['#3b82f6', '#10b981', '#f59e0b']
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                }
+                plugins: { legend: { position: 'bottom' } }
             }
         });
     }
 
-    generateTrendData(days) {
+    async generateTrendData(days) {
         const labels = [];
         const revenue = [];
         const now = new Date();
 
+        // Fetch all data once to avoid repeated Store.get calls in a loop
+        const exTx = await window.Store.get('exchange_transactions') || [];
+        const phTx = await window.Store.get('pharmacy_sales') || [];
+        const coInc = await window.Store.get('construction_income') || [];
+        const coExp = await window.Store.get('construction_expenses') || [];
+
         for (let i = days - 1; i >= 0; i--) {
             const date = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
-            labels.push(date.toLocaleDateString());
+            labels.push(date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
 
-            const dayStart = new Date(date);
-            dayStart.setHours(0, 0, 0, 0);
-            const dayEnd = new Date(date);
-            dayEnd.setHours(23, 59, 59, 999);
+            const dayStart = new Date(date); dayStart.setHours(0,0,0,0);
+            const dayEnd = new Date(date); dayEnd.setHours(23,59,59,999);
 
-            const dayMetrics = this.getMetricsForPeriod(dayStart, dayEnd);
-            revenue.push(dayMetrics.totalRevenue);
+            let dayRev = 0;
+            // Exchange
+            exTx.forEach(t => { if(new Date(t.date) >= dayStart && new Date(t.date) <= dayEnd) dayRev += parseFloat(t.total) * 0.02; });
+            // Pharmacy
+            phTx.forEach(t => { if(new Date(t.date) >= dayStart && new Date(t.date) <= dayEnd) dayRev += t.total * 0.25; });
+            // Construction
+            let coDay = 0;
+            coInc.forEach(t => { if(new Date(t.date) >= dayStart && new Date(t.date) <= dayEnd) coDay += t.amount; });
+            coExp.forEach(t => { if(new Date(t.date) >= dayStart && new Date(t.date) <= dayEnd) coDay -= t.amount; });
+            dayRev += Math.max(0, coDay);
+
+            revenue.push(dayRev);
         }
-
         return { labels, revenue };
     }
 
-    getModulePerformanceData() {
+    async getModulePerformanceData() {
         const now = new Date();
-        const periodStart = new Date(now.getTime() - (this.currentPeriod * 24 * 60 * 60 * 1000));
-        const metrics = this.getMetricsForPeriod(periodStart, now);
-
+        const start = new Date(now.getTime() - (this.currentPeriod * 24 * 60 * 60 * 1000));
+        const metrics = await this.getMetricsForPeriod(start, now);
         return {
-            labels: ['Exchange', 'Pharmacy', 'Construction'],
-            values: [
-                metrics.exchangeVolume,
-                metrics.pharmacySales,
-                Math.abs(metrics.constructionProfit)
-            ]
+            values: [metrics.exchangeVolume, metrics.pharmacySales, Math.abs(metrics.constructionProfit)]
         };
     }
 
-    renderTopItems() {
+    async renderTopItems() {
         const container = document.getElementById('top-items-list');
         if (!container) return;
 
-        // Get top performing items from pharmacy
-        const pharmacySales = window.Store.get('pharmacy_sales') || [];
-        const itemPerformance = {};
-
-        pharmacySales.forEach(sale => {
-            if (sale.items) {
-                sale.items.forEach(item => {
-                    if (!itemPerformance[item.name]) {
-                        itemPerformance[item.name] = {
-                            revenue: 0,
-                            quantity: 0
-                        };
-                    }
-                    itemPerformance[item.name].revenue += item.price * item.qty;
-                    itemPerformance[item.name].quantity += item.qty;
-                });
-            }
+        const phSales = await window.Store.get('pharmacy_sales') || [];
+        const items = {};
+        phSales.forEach(s => {
+            (s.items || []).forEach(it => {
+                if(!items[it.name]) items[it.name] = 0;
+                items[it.name] += it.price * it.qty;
+            });
         });
 
-        // Sort by revenue
-        const sortedItems = Object.entries(itemPerformance)
-            .sort(([,a], [,b]) => b.revenue - a.revenue)
-            .slice(0, 10);
-
-        if (sortedItems.length === 0) {
-            container.innerHTML = '<div class="empty-state">No sales data available</div>';
+        const sorted = Object.entries(items).sort((a,b) => b[1] - a[1]).slice(0, 10);
+        
+        if (sorted.length === 0) {
+            container.innerHTML = '<div class="empty-state">No sales data found</div>';
             return;
         }
 
-        container.innerHTML = sortedItems.map(([name, data]) => `
-            <div class="item">
-                <div class="name">${name}</div>
-                <div class="value">$${data.revenue.toFixed(2)}</div>
+        container.innerHTML = sorted.map(([name, val]) => `
+            <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid var(--border-color);">
+                <span style="font-weight:600">${name}</span>
+                <span class="badge badge-pharmacy">$${val.toFixed(2)}</span>
             </div>
         `).join('');
     }
 
-    renderTransactionSummary() {
+    async renderTransactionSummary() {
         const tbody = document.getElementById('transaction-summary-body');
         if (!tbody) return;
 
         const now = new Date();
-        const periodStart = new Date(now.getTime() - (this.currentPeriod * 24 * 60 * 60 * 1000));
+        const start = new Date(now.getTime() - (this.currentPeriod * 24 * 60 * 60 * 1000));
+        
+        const metrics = await this.getMetricsForPeriod(start, now);
+        
+        // Need counts too
+        const ex = await window.Store.get('exchange_transactions') || [];
+        const ph = await window.Store.get('pharmacy_sales') || [];
+        const coI = await window.Store.get('construction_income') || [];
+        const coE = await window.Store.get('construction_expenses') || [];
 
-        // Exchange summary
-        const exchangeTx = window.Store.get('exchange_transactions') || [];
-        const exchangeFiltered = exchangeTx.filter(tx => {
-            const txDate = new Date(tx.date);
-            return txDate >= periodStart && txDate <= now;
-        });
-
-        const exchangeTotal = exchangeFiltered.reduce((sum, tx) => sum + (tx.amount * tx.rate), 0);
-        const exchangeCount = exchangeFiltered.length;
-        const exchangeAvg = exchangeCount > 0 ? exchangeTotal / exchangeCount : 0;
-
-        // Pharmacy summary
-        const pharmacySales = window.Store.get('pharmacy_sales') || [];
-        const pharmacyFiltered = pharmacySales.filter(sale => {
-            const saleDate = new Date(sale.date);
-            return saleDate >= periodStart && saleDate <= now;
-        });
-
-        const pharmacyTotal = pharmacyFiltered.reduce((sum, sale) => sum + sale.total, 0);
-        const pharmacyCount = pharmacyFiltered.length;
-        const pharmacyAvg = pharmacyCount > 0 ? pharmacyTotal / pharmacyCount : 0;
-
-        // Construction summary
-        const constructionIncome = window.Store.get('construction_income') || [];
-        const constructionExpenses = window.Store.get('construction_expenses') || [];
-
-        const incomeFiltered = constructionIncome.filter(inc => {
-            const incDate = new Date(inc.date);
-            return incDate >= periodStart && incDate <= now;
-        });
-
-        const expenseFiltered = constructionExpenses.filter(exp => {
-            const expDate = new Date(exp.date);
-            return expDate >= periodStart && expDate <= now;
-        });
-
-        const constructionTotal = incomeFiltered.reduce((sum, inc) => sum + inc.amount, 0) -
-                                 expenseFiltered.reduce((sum, exp) => sum + exp.amount, 0);
-        const constructionCount = incomeFiltered.length + expenseFiltered.length;
-        const constructionAvg = constructionCount > 0 ? Math.abs(constructionTotal) / constructionCount : 0;
+        const exC = ex.filter(t => new Date(t.date) >= start).length;
+        const phC = ph.filter(t => new Date(t.date) >= start).length;
+        const coC = coI.filter(t => new Date(t.date) >= start).length + coE.filter(t => new Date(t.date) >= start).length;
 
         tbody.innerHTML = `
             <tr>
-                <td>Exchange</td>
-                <td>${exchangeCount}</td>
-                <td>$${exchangeTotal.toFixed(2)}</td>
-                <td>$${exchangeAvg.toFixed(2)}</td>
+                <td><strong>Exchange</strong></td>
+                <td>${exC}</td>
+                <td>$${metrics.exchangeVolume.toLocaleString()}</td>
+                <td>$${exC > 0 ? (metrics.exchangeVolume / exC).toFixed(2) : '0.00'}</td>
             </tr>
             <tr>
-                <td>Pharmacy</td>
-                <td>${pharmacyCount}</td>
-                <td>$${pharmacyTotal.toFixed(2)}</td>
-                <td>$${pharmacyAvg.toFixed(2)}</td>
+                <td><strong>Pharmacy</strong></td>
+                <td>${phC}</td>
+                <td>$${metrics.pharmacySales.toLocaleString()}</td>
+                <td>$${phC > 0 ? (metrics.pharmacySales / phC).toFixed(2) : '0.00'}</td>
             </tr>
             <tr>
-                <td>Construction</td>
-                <td>${constructionCount}</td>
-                <td>$${constructionTotal.toFixed(2)}</td>
-                <td>$${constructionAvg.toFixed(2)}</td>
+                <td><strong>Construction</strong></td>
+                <td>${coC}</td>
+                <td>$${Math.abs(metrics.constructionProfit).toLocaleString()}</td>
+                <td>$${coC > 0 ? (Math.abs(metrics.constructionProfit) / coC).toFixed(2) : '0.00'}</td>
             </tr>
         `;
     }
 
     setupEventListeners() {
-        // Period selector
-        const periodSelector = document.getElementById('analytics-period');
-        if (periodSelector) {
-            periodSelector.addEventListener('change', (e) => {
+        const selector = document.getElementById('analytics-period');
+        if (selector) {
+            selector.onchange = (e) => {
                 this.currentPeriod = parseInt(e.target.value);
                 this.renderAnalytics();
-            });
+            };
         }
 
-        // Export button
         const exportBtn = document.getElementById('export-analytics-btn');
         if (exportBtn) {
-            exportBtn.addEventListener('click', () => this.exportReport());
+            exportBtn.onclick = () => this.exportReport();
         }
-
-        // Tab buttons
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                // Remove active class from all tabs
-                tabBtns.forEach(b => b.classList.remove('active'));
-                // Add active class to clicked tab
-                btn.classList.add('active');
-                // Render detailed breakdown
-                this.renderDetailedBreakdown(btn.dataset.tab);
-            });
-        });
     }
 
-    renderDetailedBreakdown(period) {
-        const container = document.getElementById('detailed-breakdown-content');
-        if (!container) return;
+    async exportReport() {
+        const now = new Date();
+        const start = new Date(now.getTime() - (this.currentPeriod * 24 * 60 * 60 * 1000));
+        const metrics = await this.getMetricsForPeriod(start, now);
 
-        const data = this.getDetailedBreakdownData(period);
-        // This would render detailed tables/charts for the selected time period
-        container.innerHTML = `
-            <div class="grid-layout">
-                <div class="card">
-                    <h4>${period.charAt(0).toUpperCase() + period.slice(1)} Breakdown</h4>
-                    <p>Detailed analytics for ${period} view will be implemented here.</p>
-                    <ul>
-                        <li>Total Periods: ${data.length}</li>
-                        <li>Average Revenue: $${data.avgRevenue?.toFixed(2) || '0.00'}</li>
-                        <li>Peak Period: ${data.peakPeriod || 'N/A'}</li>
-                    </ul>
-                </div>
-            </div>
-        `;
-    }
+        let csv = "Module,Metric,Value\n";
+        csv += `Platform,Current Period,${this.currentPeriod} Days\n`;
+        csv += `Platform,Total Revenue,${metrics.totalRevenue}\n`;
+        csv += `Exchange,Volume,${metrics.exchangeVolume}\n`;
+        csv += `Pharmacy,Sales,${metrics.pharmacySales}\n`;
+        csv += `Construction,Balance,${metrics.constructionProfit}\n`;
 
-    getDetailedBreakdownData(period) {
-        // Mock data for detailed breakdown
-        // In a real implementation, this would calculate based on the period type
-        return {
-            length: 10,
-            avgRevenue: 1250.50,
-            peakPeriod: 'Week of Dec 15'
-        };
-    }
-
-    exportReport() {
-        // Create a simple CSV export
-        const data = this.generateExportData();
-        const csv = this.convertToCSV(data);
-        this.downloadCSV(csv, `analytics-report-${new Date().toISOString().split('T')[0]}.csv`);
-    }
-
-    generateExportData() {
-        // Generate export data based on current analytics
-        return [
-            ['Metric', 'Value', 'Change'],
-            ['Total Revenue', document.getElementById('analytics-total-revenue')?.textContent || '$0', ''],
-            ['Exchange Volume', document.getElementById('analytics-exchange-volume')?.textContent || '$0', ''],
-            ['Pharmacy Sales', document.getElementById('analytics-pharmacy-sales')?.textContent || '$0', ''],
-            ['Construction Profit', document.getElementById('analytics-construction-profit')?.textContent || '$0', '']
-        ];
-    }
-
-    convertToCSV(data) {
-        return data.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-    }
-
-    downloadCSV(csv, filename) {
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = filename;
+        a.download = `UniManage_Report_${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
-        window.URL.revokeObjectURL(url);
     }
 }
 
-// Initialize analytics when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    window.Analytics = new Analytics();
-});
+window.Analytics = new Analytics();

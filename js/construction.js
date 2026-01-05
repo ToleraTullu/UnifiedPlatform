@@ -168,54 +168,186 @@ class ConstructionModule {
         const handleForm = (formId, type, key) => {
             const form = document.getElementById(formId);
             if (form) {
-                // Remove old listeners? Hard without named function. 
-                // Assuming simple page load architecture, multiple listeners shouldn't stack if script runs once.
-                form.addEventListener('submit', (e) => {
+                form.addEventListener('submit', async (e) => {
                     e.preventDefault();
 
-                    const descId = type === 'expense' ? 'exp-desc' : 'inc-desc';
-                    const amtId = type === 'expense' ? 'exp-amount' : 'inc-amount';
-                    const dateId = type === 'expense' ? 'exp-date' : 'inc-date';
                     const siteId = type === 'expense' ? 'exp-site' : 'inc-site';
-
                     const siteVal = document.getElementById(siteId).value;
                     if (!siteVal) {
                         alert("Please select a Site.");
                         return;
                     }
 
-                    const data = {
-                        site: siteVal,
-                        description: document.getElementById(descId).value,
-                        amount: parseFloat(document.getElementById(amtId).value),
-                        date: document.getElementById(dateId).value, // YYYY-MM-DD
-                        type: type
-                    };
-
-                    this.saveTransaction(key, data);
-                    form.reset();
-                    // Reset date to today and re-populate sites just in case
-                    document.getElementById(dateId).value = new Date().toISOString().split('T')[0];
-                    this.populateSiteSelects();
+                    this.showPaymentModal(type, key, form);
                 });
             }
         };
 
-        handleForm('construction-expense-form', 'expense', this.expenseKey);
-        handleForm('construction-income-form', 'income', this.incomeKey);
+        handleForm('construction-expense-form', 'expense', this.expKey);
+        handleForm('construction-income-form', 'income', this.incKey);
     }
 
-    saveTransaction(key, data) {
+    async showPaymentModal(type, key, activeForm) {
+        const modal = document.getElementById('modal-container');
+        const title = document.getElementById('modal-title');
+        const body = document.getElementById('modal-body');
+
+        const fd = new FormData(activeForm);
+        const amount = parseFloat(fd.get('amount') || activeForm.querySelector('[name="amount"]')?.value || 0);
+        const site = fd.get('site') || activeForm.querySelector('select')?.value || 'N/A';
+
+        title.textContent = 'Finalize Payment';
+        
+        // Fetch eligible banks
+        const allBanks = await window.Store.get('bank_accounts') || [];
+        const sectorBanks = allBanks.filter(b => !b.sectors || b.sectors.includes('construction') || b.sectors === 'all');
+        const bankOptions = sectorBanks.map(b => `<option value="${b.id}">${b.bank_name} - ${b.account_number}</option>`).join('');
+
+        body.innerHTML = `
+            <div style="margin-bottom:20px; padding:15px; background:var(--bg-input); border-radius:8px; text-align:center;">
+                <div style="font-size:0.9rem; color:var(--text-muted); text-transform:uppercase;">Total Amount to ${type === 'expense' ? 'PAY' : 'RECEIVE'}</div>
+                <div style="font-size:2rem; font-weight:800; color:var(--text-main);">${amount.toFixed(2)} <span style="font-size:1rem; font-weight:400;">USD</span></div>
+                <div style="font-size:0.9rem; margin-top:5px;">Site: ${site}</div>
+            </div>
+
+            <form id="payment-finalize-form">
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <div style="display:flex; gap:20px; margin-top:5px;">
+                        <label style="display:flex; align-items:center; gap:8px; font-weight:normal; cursor:pointer;">
+                            <input type="radio" name="payment_method" value="cash" checked style="width:18px; height:18px;"> Cash
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px; font-weight:normal; cursor:pointer;">
+                            <input type="radio" name="payment_method" value="bank" style="width:18px; height:18px;"> Bank Transfer
+                        </label>
+                    </div>
+                </div>
+
+                <div id="modal-bank-selector" style="display:none;">
+                    <div class="form-group">
+                        <label>Company Bank Account</label>
+                        <select name="bank_account_id" class="form-control">
+                            <option value="">Select Account</option>
+                            ${bankOptions}
+                        </select>
+                    </div>
+                    ${type === 'expense' ? `
+                        <div style="padding:10px; border:1px solid var(--border-color); border-radius:8px; margin-top:10px;">
+                            <label style="font-size:0.8rem; color:var(--text-muted);">BENEFICIARY DETAILS (EXTERNAL)</label>
+                            <div class="form-group" style="margin-top:10px;">
+                                <input name="external_bank_name" placeholder="Beneficiary Bank" class="form-control" style="margin-bottom:10px;">
+                                <input name="external_account_number" placeholder="Account Number" class="form-control">
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <button type="submit" class="btn-success full-width mt-3" style="padding:12px;">Confirm & Record Transaction</button>
+            </form>
+        `;
+
+        modal.classList.remove('hidden');
+
+        const pform = document.getElementById('payment-finalize-form');
+        const bankSelector = document.getElementById('modal-bank-selector');
+        
+        pform.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                bankSelector.style.display = radio.value === 'bank' ? 'block' : 'none';
+                const bankSelect = pform.querySelector('select[name="bank_account_id"]');
+                if(radio.value === 'bank') bankSelect.setAttribute('required', 'true');
+                else bankSelect.removeAttribute('required');
+            });
+        });
+
+        pform.onsubmit = async (e) => {
+            e.preventDefault();
+            const pfd = new FormData(pform);
+            const descId = type === 'expense' ? 'exp-desc' : 'inc-desc';
+            const amtId = type === 'expense' ? 'exp-amount' : 'inc-amount';
+            const dateId = type === 'expense' ? 'exp-date' : 'inc-date';
+            const siteId = type === 'expense' ? 'exp-site' : 'inc-site';
+
+            const data = {
+                site: document.getElementById(siteId).value,
+                description: document.getElementById(descId).value,
+                amount: parseFloat(document.getElementById(amtId).value),
+                date: document.getElementById(dateId).value,
+                payment_method: pfd.get('payment_method'),
+                bank_account_id: pfd.get('bank_account_id'),
+                external_bank_name: pfd.get('external_bank_name'),
+                external_account_number: pfd.get('external_account_number'),
+                type: type
+            };
+
+            const newTx = await this.saveTransaction(key, data);
+            
+            modal.classList.add('hidden');
+
+            if(confirm('Transaction Recorded! Print Receipt?')) {
+                this.printReceipt(newTx);
+            }
+
+            activeForm.reset();
+            const today = new Date().toISOString().split('T')[0];
+            const dateEl = document.getElementById(dateId);
+            if (dateEl) dateEl.value = today;
+            this.populateSiteSelects();
+        };
+    }
+
+    async saveTransaction(key, data) {
         data.date = new Date(data.date).toISOString();
-        window.Store.add(key, data);
-        alert('Transaction Saved');
+        const newItem = await window.Store.add(key, data);
+        
+        await window.Store.addActivityLog({
+            action_type: 'ADD',
+            module_name: 'Construction',
+            details: `${data.type.toUpperCase()} recorded for ${data.site}: ${data.amount}`
+        });
+
         this.updateStats();
+        return newItem;
+    }
+
+    printReceipt(tx) {
+        const win = window.open('', '', 'width=400,height=600');
+        win.document.write(`
+            <html>
+                <style>
+                    body { font-family: monospace; padding: 20px; }
+                    .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
+                    .row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+                    .footer { text-align: center; margin-top: 20px; font-size: 0.8em; }
+                </style>
+                <body>
+                    <div class="header">
+                        <h2>Construction Receipt</h2>
+                        <p>Ref: ${tx.id}</p>
+                    </div>
+                    <div class="row"><span>Date:</span><span>${new Date(tx.date).toLocaleDateString()}</span></div>
+                    <div class="row"><span>Site:</span><span>${tx.site}</span></div>
+                    <div class="row"><span>Desc:</span><span>${tx.description}</span></div>
+                    <div class="row"><span>Amount:</span><span>$${tx.amount.toFixed(2)}</span></div>
+                    <hr>
+                    <div class="row"><span>Method:</span><span>${tx.payment_method.toUpperCase()}</span></div>
+                    ${tx.external_bank_name ? `<div class="row"><span>To Bank:</span><span>${tx.external_bank_name}</span></div>` : ''}
+                    <div class="footer">Thank you!</div>
+                </body>
+            </html>
+        `);
+        win.document.close();
+        setTimeout(() => {
+            win.focus();
+            win.print();
+            win.close();
+        }, 500);
     }
 
     // --- Records ---
-    renderRecords() {
-        const expenses = (window.Store.get(this.expenseKey) || []).map(i => ({ ...i, cat: 'expense' }));
-        const incomes = (window.Store.get(this.incomeKey) || []).map(i => ({ ...i, cat: 'income' }));
+    async renderRecords() {
+        const expenses = (await window.Store.get(this.expenseKey) || []).map(i => ({ ...i, cat: 'expense' }));
+        const incomes = (await window.Store.get(this.incomeKey) || []).map(i => ({ ...i, cat: 'income' }));
         const all = [...expenses, ...incomes];
 
         all.sort((a, b) => new Date(b.date) - new Date(a.date));

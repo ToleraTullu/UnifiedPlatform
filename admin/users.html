@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>UniManage - User Management</title>
   <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="stylesheet" href="../assets/bootstrap/css/bootstrap.min.css">
+
 </head>
 <body>
   <div class="app-container">
@@ -12,43 +14,62 @@
     <main class="main-content">
       <header class="topbar"></header>
       <div class="content-wrapper">
-        <div class="card">
-          <h3>User Management</h3>
-          <p style="color:#64748b">Create users and assign them to a sector or make them admins.</p>
-          <div id="no-access" style="display:none;color:#ef4444;font-weight:bold">Access denied. Admins only.</div>
+        <div class="grid-layout" style="display: grid; grid-template-columns: 350px 1fr; gap: 2rem;">
+          
+          <!-- Create/Edit Form -->
+          <div class="card">
+            <h3>User Profile</h3>
+            <p style="color:var(--text-muted); margin-bottom:1.5rem;">Configure system access and roles.</p>
+            
+            <form id="user-form">
+              <input type="hidden" id="edit-mode" value="">
+              <div class="form-group">
+                <label>Username</label>
+                <input name="username" id="u-username" required placeholder="User unique ID" />
+              </div>
+              <div class="form-group" id="pass-group">
+                <label>Password</label>
+                <input name="password" id="u-password" type="password" required placeholder="••••••••" />
+              </div>
+              <div class="form-group">
+                <label>Full Name</label>
+                <input name="name" id="u-name" placeholder="John Doe" />
+              </div>
+              <div class="form-group">
+                <label>Role / Assignment</label>
+                <select name="role" id="u-role">
+                  <option value="admin">Global Admin</option>
+                  <option value="exchange_user">Exchange Operator</option>
+                  <option value="pharmacy_user">Pharmacy Operator</option>
+                  <option value="construction_user">Construction Manager</option>
+                </select>
+              </div>
+              <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="btn-primary full-width" type="submit" id="submit-btn">Create User</button>
+                <button class="btn-secondary" type="button" id="cancel-btn" style="display:none;">Cancel</button>
+              </div>
+            </form>
+          </div>
 
-          <form id="user-form" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-top:10px;">
-            <div class="form-group">
-              <label>Username</label>
-              <input name="username" required />
+          <!-- Users List -->
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                <h3 style="margin:0">Active Users</h3>
+                <div id="no-access" style="display:none; color:var(--danger); font-size:0.9rem; font-weight:600;">⚠️ Admin Only</div>
             </div>
-            <div class="form-group">
-              <label>Password</label>
-              <input name="password" type="password" required />
+            
+            <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                      <tr>
+                          <th>User Details</th>
+                          <th>System Role</th>
+                          <th style="text-align:right">Actions</th>
+                      </tr>
+                  </thead>
+                  <tbody id="users-body"></tbody>
+                </table>
             </div>
-            <div class="form-group">
-              <label>Full Name</label>
-              <input name="name" />
-            </div>
-            <div class="form-group">
-              <label>Role / Sector</label>
-              <select name="role">
-                <option value="pharmacy_user">Pharmacy</option>
-                <option value="exchange_user">Exchange</option>
-                <option value="construction_user">Construction</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <button class="btn-primary" type="submit">Create</button>
-            </div>
-          </form>
-
-          <div style="margin-top:1rem">
-            <table class="data-table">
-              <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Actions</th></tr></thead>
-              <tbody id="users-body"></tbody>
-            </table>
           </div>
         </div>
       </div>
@@ -60,6 +81,11 @@
   <script src="../assets/js/layout.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      const layout = new Layout();
+      layout.ensureLayoutContainers();
+      layout.renderSidebar();
+      layout.renderTopbar();
+
       const user = window.Auth && window.Auth.currentUser;
       if (!user || user.role !== 'admin') {
         document.getElementById('no-access').style.display = 'block';
@@ -69,13 +95,28 @@
 
       const tbody = document.getElementById('users-body');
       const form = document.getElementById('user-form');
+      const cancelBtn = document.getElementById('cancel-btn');
+      const submitBtn = document.getElementById('submit-btn');
+      const editMode = document.getElementById('edit-mode');
 
       function render() {
         const users = window.Store.get('unified_users') || [];
         tbody.innerHTML = '';
         users.forEach(u => {
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${u.username}</td><td>${u.name||''}</td><td>${u.role}</td><td><button class="btn-secondary edit-user" data-user="${u.username}">Edit</button> <button class="btn-danger delete-user" data-user="${u.username}">Delete</button></td>`;
+          const roleBadge = u.role === 'admin' ? 'blue' : 'green';
+          tr.innerHTML = `
+            <td>
+                <div style="font-weight:600">${u.name || u.username}</div>
+                <div style="font-size:0.8rem; color:var(--text-muted)">@${u.username}</div>
+            </td>
+            <td>
+                <span class="role-badge" style="background:rgba(255,215,0,0.2); color:var(--text-main); border:1px solid var(--primary);">${u.role.replace('_', ' ')}</span>
+            </td>
+            <td style="text-align:right">
+                <button class="btn-secondary edit-user" data-user="${u.username}" style="padding:5px 10px; font-size:0.8rem;">Edit</button> 
+                <button class="btn-danger delete-user" data-user="${u.username}" style="padding:5px 10px; font-size:0.8rem;">Delete</button>
+            </td>`;
           tbody.appendChild(tr);
         });
       }
@@ -85,33 +126,70 @@
       form.addEventListener('submit', (e) => {
         e.preventDefault();
         const fd = new FormData(form);
-        const userObj = { username: fd.get('username').trim(), password: fd.get('password'), name: fd.get('name')||'', role: fd.get('role') };
-        if (!userObj.username || !userObj.password) { alert('username and password required'); return; }
+        const uname = fd.get('username').trim();
         const users = window.Store.get('unified_users') || [];
-        if (users.some(u => u.username === userObj.username)) { alert('username exists'); return; }
-        users.push(userObj);
+        
+        if (editMode.value) {
+            const idx = users.findIndex(u => u.username === editMode.value);
+            if (idx !== -1) {
+                users[idx].name = fd.get('name');
+                users[idx].role = fd.get('role');
+                if (fd.get('password')) users[idx].password = fd.get('password');
+            }
+        } else {
+            if (users.some(u => u.username === uname)) { alert('Username already exists'); return; }
+            users.push({ 
+                username: uname, 
+                password: fd.get('password'), 
+                name: fd.get('name') || '', 
+                role: fd.get('role') 
+            });
+        }
+        
         window.Store.set('unified_users', users);
-        form.reset(); render();
+        resetForm();
+        render();
       });
 
       tbody.addEventListener('click', (ev) => {
         const btn = ev.target.closest('button'); if (!btn) return;
         const uname = btn.dataset.user;
+        
         if (btn.classList.contains('delete-user')) {
-          if (!confirm('Delete user '+uname+'?')) return;
+          if (!confirm('Delete user @' + uname + '?')) return;
           let users = window.Store.get('unified_users') || [];
           users = users.filter(u => u.username !== uname);
-          window.Store.set('unified_users', users); render();
+          window.Store.set('unified_users', users); 
+          render();
         } else if (btn.classList.contains('edit-user')) {
           const users = window.Store.get('unified_users') || [];
           const u = users.find(x => x.username === uname);
           if (!u) return; 
-          const newName = prompt('Full name', u.name||''); if (newName===null) return;
-          const newRole = prompt('Role (admin,exchange_user,pharmacy_user,construction_user)', u.role) || u.role;
-          u.name = newName; u.role = newRole;
-          window.Store.set('unified_users', users); render();
+
+          editMode.value = u.username;
+          document.getElementById('u-username').value = u.username;
+          document.getElementById('u-username').disabled = true;
+          document.getElementById('u-name').value = u.name || '';
+          document.getElementById('u-role').value = u.role;
+          document.getElementById('u-password').required = false;
+          document.getElementById('u-password').placeholder = '(Leave blank to keep same)';
+          
+          submitBtn.textContent = 'Update User';
+          cancelBtn.style.display = 'block';
         }
       });
+
+      cancelBtn.onclick = resetForm;
+
+      function resetForm() {
+        form.reset();
+        editMode.value = '';
+        document.getElementById('u-username').disabled = false;
+        document.getElementById('u-password').required = true;
+        document.getElementById('u-password').placeholder = '••••••••';
+        submitBtn.textContent = 'Create User';
+        cancelBtn.style.display = 'none';
+      }
     });
   </script>
 </body>

@@ -23,6 +23,30 @@
                         <div class="form-group"><label>Amount</label><input type="number" name="amount" required
                                 step="0.01"></div>
                         <div class="form-group"><label>Date</label><input type="date" name="date" required></div>
+
+                        <div class="form-group">
+                            <label>Payment Method</label>
+                            <div style="display:flex; gap:15px; margin-top:5px;">
+                                <label><input type="radio" name="payment_method" value="cash" checked> Cash</label>
+                                <label><input type="radio" name="payment_method" value="bank"> Bank</label>
+                            </div>
+                        </div>
+
+                        <div id="bank-selector" style="display:none; margin-bottom:15px; border:1px solid #eee; padding:10px; background:#fafafa;">
+                            <div class="form-group">
+                                <label>Source Bank Account</label>
+                                <select name="bank_account_id"></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Beneficiary Bank (External)</label>
+                                <input type="text" name="external_bank_name" placeholder="Bank Name">
+                            </div>
+                            <div class="form-group">
+                                <label>Beneficiary Account No.</label>
+                                <input type="text" name="external_account_number" placeholder="Account No.">
+                            </div>
+                        </div>
+
                         <button type="submit" class="btn-danger">Record Expense</button>
                     </form>
                 </div>

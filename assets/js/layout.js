@@ -56,6 +56,27 @@ class Layout {
             // append main
             document.body.appendChild(main);
         }
+
+        // Ensure Modal Container exists for popups
+        if (!document.getElementById('modal-container')) {
+            const modal = document.createElement('div');
+            modal.id = 'modal-container';
+            modal.className = 'modal hidden';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <span class="close-modal">&times;</span>
+                    <h2 id="modal-title">Title</h2>
+                    <div id="modal-body"></div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Close logic
+            modal.querySelector('.close-modal').onclick = () => modal.classList.add('hidden');
+            window.onclick = (event) => {
+                if (event.target == modal) modal.classList.add('hidden');
+            };
+        }
     }
 
     checkAuth() {
@@ -106,6 +127,7 @@ class Layout {
                 roles: ['admin'],
                 items: [
                     { label: 'Users', icon: '👥', link: 'admin/users.html' },
+                    { label: 'Bank Accounts', icon: '🏦', link: 'admin/banks.html' },
                     { label: 'System Logs', icon: '📋', link: 'admin/logs.html' }
                 ]
             },

@@ -37,8 +37,7 @@
         layout.renderTopbar();
 
         document.addEventListener('DOMContentLoaded', () => {
-             const ex = new ExchangeModule();
-             ex.onViewLoad('sell'); 
+            window.ExchangeModule.renderForm('sell');
         });
     </script>
 </body>

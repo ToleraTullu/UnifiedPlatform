@@ -114,3 +114,41 @@ INSERT INTO exchange_rates (code, buy_rate, sell_rate) VALUES
 ('USD', 1.0000, 1.0200),
 ('EUR', 0.9000, 0.9200),
 ('GBP', 0.8000, 0.8200);
+
+-- 9. Bank Accounts Table
+CREATE TABLE IF NOT EXISTS bank_accounts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    bank_name VARCHAR(100) NOT NULL,
+    account_number VARCHAR(50) NOT NULL,
+    account_holder VARCHAR(100) NOT NULL,
+    sectors VARCHAR(255) DEFAULT 'all', -- Comma-separated: 'exchange,pharmacy,construction' or 'all'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 10. Schema Updates for Payment Methods (Run these ALTERS if tables exist, or include in CREATE definitions above)
+-- Since we are defining the full schema, we will add the columns to the CREATE statements directly for clarity in a fresh install,
+-- BUT for an existing DB, we need ALTER statements. I will provide ALTER statements here for safety on existing DBs.
+
+-- Exchange Transactions
+-- ALTER TABLE exchange_transactions ADD COLUMN payment_method ENUM('cash', 'bank') DEFAULT 'cash';
+-- ALTER TABLE exchange_transactions ADD COLUMN bank_account_id INT NULL;
+-- ALTER TABLE exchange_transactions ADD COLUMN external_bank_name VARCHAR(100) NULL;
+-- ALTER TABLE exchange_transactions ADD COLUMN external_account_number VARCHAR(50) NULL;
+-- ALTER TABLE exchange_transactions ADD FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id);
+
+-- Pharmacy Sales
+-- ALTER TABLE pharmacy_sales ADD COLUMN payment_method ENUM('cash', 'bank') DEFAULT 'cash';
+-- ALTER TABLE pharmacy_sales ADD COLUMN bank_account_id INT NULL;
+-- ALTER TABLE pharmacy_sales ADD FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id);
+
+-- Construction Income
+-- ALTER TABLE construction_income ADD COLUMN payment_method ENUM('cash', 'bank') DEFAULT 'cash';
+-- ALTER TABLE construction_income ADD COLUMN bank_account_id INT NULL;
+-- ALTER TABLE construction_income ADD FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id);
+
+-- Construction Expenses
+-- ALTER TABLE construction_expenses ADD COLUMN payment_method ENUM('cash', 'bank') DEFAULT 'cash';
+-- ALTER TABLE construction_expenses ADD COLUMN bank_account_id INT NULL;
+-- ALTER TABLE construction_expenses ADD COLUMN external_bank_name VARCHAR(100) NULL;
+-- ALTER TABLE construction_expenses ADD COLUMN external_account_number VARCHAR(50) NULL;
+-- ALTER TABLE construction_expenses ADD FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id);

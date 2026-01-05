@@ -24,6 +24,7 @@ const INIT_KEYS = {
     'construction_sites': [],
     'construction_expenses': [],
     'construction_income': [],
+    'bank_accounts': [],
     'activity_logs': []
 };
 
@@ -73,7 +74,6 @@ class AsyncStore {
         return true;
     }
 
-    // Special Helper for Logging Activity
     async logActivity(action, module, details) {
         const log = {
             id: Date.now(),
@@ -83,7 +83,19 @@ class AsyncStore {
             timestamp: new Date().toISOString(),
             current_user: (JSON.parse(sessionStorage.getItem('active_user') || '{}')).username || 'system'
         };
-        await this.add('activity_logs', log);
+        return await this.add('activity_logs', log);
+    }
+
+    async addActivityLog(log) {
+        return await this.logActivity(log.action_type, log.module_name, log.details);
+    }
+
+    async getActivityLogs(limit = null) {
+        // Simulate delay
+        await new Promise(r => setTimeout(r, 50));
+        const logs = await this.get('activity_logs') || [];
+        logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        return limit ? logs.slice(0, limit) : logs;
     }
 }
 

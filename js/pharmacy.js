@@ -62,9 +62,9 @@ class PharmacyModule {
         this.updateStats(); // Also sync global
     }
 
-    updateStats() {
+    async updateStats() {
         // Global
-        const sales = window.Store.get(this.salesKey) || [];
+        const sales = await window.Store.get(this.salesKey) || [];
         const total = sales.reduce((a, c) => a + c.total, 0);
         const el = document.getElementById('stat-pharmacy');
         if (el) el.textContent = total.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
@@ -211,23 +211,126 @@ class PharmacyModule {
     async checkout() {
         if (this.cart.length === 0) return;
 
-        // 1. Save Sale Record
-        const sale = {
-            items: this.cart,
-            total: this.cart.reduce((a, c) => a + (c.qty * c.price), 0)
-        };
-        await window.Store.add(this.salesKey, sale);
+        // Show Checkout Modal for Payment Details
+        const modal = document.getElementById('modal-container');
+        document.getElementById('modal-title').textContent = 'Finalize Checkout';
+        const body = document.getElementById('modal-body');
 
-        // 2. Decrement Stock -> Handled by API now mostly?
-        // Our PHP Sales endpoint updates stock automatically!
-        // So we don't need to manually update stock item by item here if using that endpoint.
-        // But for safety/feedback let's refresh.
-        
-        // 3. Clear Cart & UI
-        this.cart = [];
-        this.renderCart();
-        this.updatePosSelect(); // refresh stock numbers in dropdown
-        alert('Sale Completed!');
+        // Fetch Banks
+        const allBanks = await window.Store.get('bank_accounts') || [];
+        const banks = allBanks.filter(b => {
+             if(!b.sectors) return true;
+             if(Array.isArray(b.sectors)) return b.sectors.includes('pharmacy');
+             return b.sectors.includes('pharmacy') || b.sectors === 'all';
+        });
+        const bankOps = banks.map(b => `<option value="${b.id}">${b.bank_name}</option>`).join('');
+
+        const total = this.cart.reduce((a, c) => a + (c.qty * c.price), 0);
+
+        body.innerHTML = `
+            <div style="padding:15px; background:#f9f9f9; border-radius:8px; margin-bottom:15px;">
+                <h4 style="margin:0">Total Amount: $${total.toFixed(2)}</h4>
+            </div>
+            <form id="pharmacy-payment-form">
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <div style="display:flex; gap:20px; margin-top:5px;">
+                        <label><input type="radio" name="payment_method" value="cash" checked> Cash</label>
+                        <label><input type="radio" name="payment_method" value="bank"> Bank</label>
+                    </div>
+                </div>
+                <div id="ph-bank-group" style="display:none;" class="form-group">
+                    <label>Company Bank Account</label>
+                    <select name="bank_account_id" class="form-control">
+                        <option value="">-- Select Bank --</option>
+                        ${bankOps}
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary full-width">Pay Now & Print Receipt</button>
+            </form>
+        `;
+
+        modal.classList.remove('hidden');
+
+        const payForm = document.getElementById('pharmacy-payment-form');
+        const bankGrp = document.getElementById('ph-bank-group');
+        const radios = payForm.querySelectorAll('input[name="payment_method"]');
+
+        radios.forEach(r => {
+            r.addEventListener('change', () => {
+                bankGrp.style.display = r.value === 'bank' ? 'block' : 'none';
+            });
+        });
+
+        payForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const pMethod = payForm.querySelector('input[name="payment_method"]:checked').value;
+            const bankId = payForm.bank_account_id.value;
+            
+            let bankName = '';
+            if(bankId && banks.length) {
+                const b = banks.find(x => x.id == bankId);
+                if(b) bankName = b.bank_name;
+            }
+
+            const sale = {
+                items: this.cart,
+                total: total,
+                date: new Date().toISOString(),
+                payment_method: pMethod,
+                bank_account_id: bankId,
+                bank_name: bankName
+            };
+
+            const newSale = await window.Store.add(this.salesKey, sale);
+            
+            await window.Store.addActivityLog({
+                action_type: 'PHARMACY_SALE',
+                module_name: 'Pharmacy',
+                details: `Sale completed: $${total.toFixed(2)}`
+            });
+            
+            modal.classList.add('hidden');
+            this.cart = [];
+            this.renderCart();
+            this.updatePosSelect();
+
+            if(confirm('Sale Completed! Print Receipt?')) {
+                this.printReceipt(newSale);
+            }
+        };
+    }
+
+    printReceipt(sale) {
+        const win = window.open('', '', 'width=400,height=600');
+        win.document.write(`
+            <html>
+                <style>
+                    body { font-family: monospace; padding: 20px; }
+                    .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
+                    .row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+                    .footer { text-align: center; margin-top: 20px; font-size: 0.8em; }
+                </style>
+                <body>
+                    <div class="header">
+                        <h2>Pharmacy Receipt</h2>
+                        <p>Date: ${new Date(sale.date).toLocaleString()}</p>
+                    </div>
+                    ${sale.items.map(i => `<div class="row"><span>${i.name} x${i.qty}</span><span>$${(i.qty * i.price).toFixed(2)}</span></div>`).join('')}
+                    <hr>
+                    <div class="row" style="font-weight:bold"><span>Total:</span><span>$${sale.total.toFixed(2)}</span></div>
+                    <div class="row"><span>Method:</span><span>${sale.payment_method.toUpperCase()}</span></div>
+                    ${sale.bank_name ? `<div class="row"><span>Bank:</span><span>${sale.bank_name}</span></div>` : ''}
+                    <div class="footer">Thank you for your visit!</div>
+                </body>
+            </html>
+        `);
+        win.document.close();
+        setTimeout(() => {
+            win.focus();
+            win.print();
+            win.close();
+        }, 500);
     }
 
     // --- Stock ---
@@ -379,20 +482,21 @@ class PharmacyModule {
     }
 
     // --- Records ---
-    renderRecords() {
-        const sales = window.Store.get(this.salesKey) || [];
+    async renderRecords() {
+        const sales = await window.Store.get(this.salesKey) || [];
         const tbody = document.getElementById('pharmacy-records-body');
+        if (!tbody) return;
         tbody.innerHTML = '';
-
+1
         sales.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         sales.forEach(s => {
-            const itemNames = s.items.map(i => `${i.name} (x${i.qty})`).join(', ');
+            const itemNames = (s.items || []).map(i => `${i.name} (x${i.qty})`).join(', ');
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${new Date(s.date).toLocaleString()}</td>
                 <td>${itemNames}</td>
-                <td>${s.total.toFixed(2)}</td>
+                <td>$${parseFloat(s.total).toFixed(2)}</td>
             `;
             tbody.appendChild(tr);
         });

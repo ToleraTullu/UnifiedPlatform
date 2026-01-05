@@ -52,27 +52,162 @@ class ConstructionModule {
 
     initForm(type) {
         const form = document.querySelector('form');
+        
         form.addEventListener('submit', (e) => {
             e.preventDefault();
-            const data = {
-                description: form.desc.value,
-                project: form.project.value,
-                amount: parseFloat(form.amount.value),
-                date: new Date(form.date.value).toISOString(),
-                type: type
-            };
-            const key = type === 'expense' ? this.expenseKey : this.incomeKey;
-            window.Store.add(key, data);
-
-            // Log the activity
-            const actionType = 'Create';
-            const moduleName = 'construction';
-            const details = `${type === 'expense' ? 'Expense' : 'Income'} logged: ${data.description} - $${data.amount}`;
-            window.Store.logActivity(actionType, moduleName, details);
-
-            alert('Saved!');
-            form.reset();
+            this.showPaymentModal(type, form);
         });
+    }
+
+    showPaymentModal(type, activeForm) {
+        const modal = document.getElementById('modal-container');
+        const title = document.getElementById('modal-title');
+        const body = document.getElementById('modal-body');
+
+        const fd = new FormData(activeForm);
+        const amount = parseFloat(fd.get('amount') || 0);
+        const project = fd.get('project') || 'N/A';
+
+        title.textContent = 'Finalize Payment';
+        
+        const allBanks = window.Store.get('bank_accounts') || [];
+        const consBanks = allBanks.filter(b => !b.sectors || b.sectors.includes('construction') || b.sectors === 'all');
+        const bankOptions = consBanks.map(b => `<option value="${b.id}">${b.bank_name} - ${b.account_number}</option>`).join('');
+
+        body.innerHTML = `
+            <div style="margin-bottom:20px; padding:15px; background:var(--bg-input); border-radius:8px; text-align:center;">
+                <div style="font-size:0.9rem; color:var(--text-muted); text-transform:uppercase;">Total Amount to ${type === 'expense' ? 'PAY' : 'RECEIVE'}</div>
+                <div style="font-size:2rem; font-weight:800; color:var(--text-main);">${amount.toFixed(2)} <span style="font-size:1rem; font-weight:400;">ETB</span></div>
+                <div style="font-size:0.9rem; margin-top:5px;">Project: ${project}</div>
+            </div>
+
+            <form id="payment-finalize-form">
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <div style="display:flex; gap:20px; margin-top:5px;">
+                        <label style="display:flex; align-items:center; gap:8px; font-weight:normal; cursor:pointer;">
+                            <input type="radio" name="payment_method" value="cash" checked style="width:18px; height:18px;"> Cash
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px; font-weight:normal; cursor:pointer;">
+                            <input type="radio" name="payment_method" value="bank" style="width:18px; height:18px;"> Bank Transfer
+                        </label>
+                    </div>
+                </div>
+
+                <div id="modal-bank-selector" style="display:none;">
+                    <div class="form-group">
+                        <label>Company Bank Account</label>
+                        <select name="bank_account_id" class="form-control">
+                            <option value="">Select Account</option>
+                            ${bankOptions}
+                        </select>
+                    </div>
+                    ${type === 'expense' ? `
+                        <div style="padding:10px; border:1px solid var(--border-color); border-radius:8px; margin-top:10px;">
+                            <label style="font-size:0.8rem; color:var(--text-muted);">BENEFICIARY DETAILS (EXTERNAL)</label>
+                            <div class="form-group" style="margin-top:10px;">
+                                <input name="external_bank_name" placeholder="Beneficiary Bank" class="form-control" style="margin-bottom:10px;">
+                                <input name="external_account_number" placeholder="Account Number" class="form-control">
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <button type="submit" class="btn-success full-width mt-3" style="padding:12px;">Confirm & Record Transaction</button>
+            </form>
+        `;
+
+        modal.classList.remove('hidden');
+
+        const pform = document.getElementById('payment-finalize-form');
+        const bankSelector = document.getElementById('modal-bank-selector');
+        
+        pform.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                bankSelector.style.display = radio.value === 'bank' ? 'block' : 'none';
+                const bankSelect = pform.querySelector('select[name="bank_account_id"]');
+                if(radio.value === 'bank') bankSelect.setAttribute('required', 'true');
+                else bankSelect.removeAttribute('required');
+            });
+        });
+
+        pform.onsubmit = (e) => {
+            e.preventDefault();
+            const pfd = new FormData(pform);
+            const bankId = pfd.get('bank_account_id');
+            let bankName = '';
+            if (bankId) {
+                const b = allBanks.find(x => x.id == bankId);
+                if (b) bankName = b.bank_name;
+            }
+
+            const data = {
+                description: activeForm.desc.value,
+                project: activeForm.project.value,
+                amount: parseFloat(activeForm.amount.value),
+                date: new Date(activeForm.date.value).toISOString(),
+                type: type,
+                payment_method: pfd.get('payment_method'),
+                bank_account_id: bankId,
+                bank_name: bankName,
+                external_bank_name: (type === 'expense') ? pfd.get('external_bank_name') : null,
+                external_account_number: (type === 'expense') ? pfd.get('external_account_number') : null
+            };
+
+            const key = type === 'expense' ? this.expenseKey : this.incomeKey;
+            const saved = window.Store.add(key, data);
+
+            window.Store.addActivityLog({
+                action_type: 'ADD',
+                module_name: 'Construction',
+                details: `${type.toUpperCase()} recorded for ${data.project}: ${data.amount}`
+            });
+
+            modal.classList.add('hidden');
+
+            if(confirm('Transaction Recorded! Print Receipt?')) {
+                this.printReceipt(saved);
+            }
+
+            activeForm.reset();
+        };
+    }
+
+    printReceipt(tx) {
+        const win = window.open('', '', 'width=400,height=600');
+        win.document.write(`
+            <html>
+            <head>
+                <title>Construction Receipt</title>
+                <style>
+                    body { font-family: monospace; padding: 20px; }
+                    .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
+                    .row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+                    .footer { text-align: center; margin-top: 20px; font-size: 0.8em; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h3>UniManage Construction</h3>
+                    <p>Date: ${new Date(tx.date).toLocaleDateString()}</p>
+                    <p>Ref: ${tx.id}</p>
+                </div>
+                <div class="row"><span>Type:</span><span>${tx.type.toUpperCase()}</span></div>
+                <div class="row"><span>Project:</span><span>${tx.project || 'N/A'}</span></div>
+                <div class="row"><span>Description:</span><span>${tx.description}</span></div>
+                <hr>
+                <div class="row" style="font-weight:bold"><span>Amount:</span><span>$${tx.amount.toFixed(2)}</span></div>
+                <hr>
+                <div class="row"><span>Payment:</span><span>${tx.payment_method.toUpperCase()}</span></div>
+                ${tx.bank_name ? `<div class="row"><span>Company Bank:</span><span>${tx.bank_name}</span></div>` : ''}
+                ${tx.external_bank_name ? `<div class="row"><span>Ext Bank:</span><span>${tx.external_bank_name}</span></div>` : ''}
+                ${tx.external_account_number ? `<div class="row"><span>Ext Acc No:</span><span>${tx.external_account_number}</span></div>` : ''}
+                <div class="footer">Thank you!</div>
+            </body>
+            </html>
+        `);
+        win.document.close();
+        win.print();
     }
 
     initRecords() {

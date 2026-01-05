@@ -24,6 +24,22 @@
                         <div class="form-group"><label>Amount</label><input type="number" name="amount" required
                                 step="0.01"></div>
                         <div class="form-group"><label>Date</label><input type="date" name="date" required></div>
+                        
+                        <div class="form-group">
+                            <label>Payment Method</label>
+                            <div style="display:flex; gap:15px; margin-top:5px;">
+                                <label><input type="radio" name="payment_method" value="cash" checked> Cash</label>
+                                <label><input type="radio" name="payment_method" value="bank"> Bank</label>
+                            </div>
+                        </div>
+
+                        <div id="bank-selector" style="display:none; margin-bottom:15px;">
+                            <div class="form-group">
+                                <label>Target Bank Account</label>
+                                <select name="bank_account_id"></select>
+                            </div>
+                        </div>
+
                         <button type="submit" class="btn-success">Record Income</button>
                     </form>
                 </div>

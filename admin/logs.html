@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UniManage - System Logs</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/bootstrap/css/bootstrap.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
@@ -20,11 +21,14 @@
 
             <div class="content-wrapper">
                 <div class="card">
-                    <h3>System Activity Logs</h3>
-                    <div style="margin-bottom: 20px;">
-                        <button id="refreshLogs" class="btn-primary">Refresh Logs</button>
-                        <button id="clearLogs" class="btn-danger" style="margin-left: 10px;">Clear All Logs</button>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                        <h3 style="margin:0">System Activity Logs</h3>
+                        <div style="display:flex; gap:10px;">
+                            <button id="refreshLogs" class="btn-primary" style="padding:8px 16px; font-size:0.85rem;">Refresh Logs</button>
+                            <button id="clearLogs" class="btn-danger" style="padding:8px 16px; font-size:0.85rem;">Clear All</button>
+                        </div>
                     </div>
+
                     <div class="table-container">
                         <table class="data-table" id="logsTable">
                             <thead>
@@ -38,7 +42,9 @@
                             </thead>
                             <tbody id="logsTableBody">
                                 <tr>
-                                    <td colspan="5" style="text-align: center; padding: 40px; color: #64748b;">Loading logs...</td>
+                                    <td colspan="5" style="text-align: center; padding: 40px; color: #64748b;">
+                                        <div class="spinner"></div> Loading logs...
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -54,6 +60,11 @@
     <script src="../assets/js/layout.js"></script>
     <script>
         function loadLogs() {
+            const layout = new Layout();
+            layout.ensureLayoutContainers();
+            layout.renderSidebar();
+            layout.renderTopbar();
+
             const logs = window.Store.getActivityLogs();
             const tbody = document.getElementById('logsTableBody');
 
@@ -62,34 +73,41 @@
                 return;
             }
 
-            tbody.innerHTML = logs.map(log => `
-                <tr>
-                    <td>${new Date(log.timestamp).toLocaleString()}</td>
-                    <td>${log.current_user}</td>
-                    <td>
-                        <span class="action-badge action-${log.action_type.toLowerCase()}">
-                            ${log.action_type}
-                        </span>
-                    </td>
-                    <td>${log.module_name}</td>
-                    <td>${log.details || '-'}</td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = logs.map(log => {
+                const colors = {
+                    'ADD': '#48BB78',
+                    'DELETE': '#F56565',
+                    'EDIT': '#4299E1',
+                    'LOGIN': '#FFD700',
+                    'LOGOUT': '#718096'
+                };
+                const color = colors[log.action_type] || '#718096';
+                
+                return `
+                    <tr>
+                        <td style="font-size:0.85rem; color:var(--text-muted)">${new Date(log.timestamp).toLocaleString()}</td>
+                        <td style="font-weight:600">@${log.current_user}</td>
+                        <td>
+                            <span class="role-badge" style="background:${color}; color:${log.action_type === 'LOGIN' ? 'var(--primary-text)' : 'white'}; padding:2px 8px; font-size:0.7rem;">
+                                ${log.action_type}
+                            </span>
+                        </td>
+                        <td style="text-transform:capitalize">${log.module_name}</td>
+                        <td style="font-size:0.85rem">${log.details || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function clearLogs() {
             if (confirm('Are you sure you want to clear all activity logs? This action cannot be undone.')) {
                 window.Store.set('activity_logs', []);
                 loadLogs();
-                alert('All logs have been cleared.');
             }
         }
 
-        // Event listeners
         document.getElementById('refreshLogs').addEventListener('click', loadLogs);
         document.getElementById('clearLogs').addEventListener('click', clearLogs);
-
-        // Load logs on page load
         document.addEventListener('DOMContentLoaded', loadLogs);
     </script>
 </body>

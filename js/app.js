@@ -176,6 +176,15 @@ class App {
                 ]
             },
             {
+                header: 'Administration',
+                roles: ['admin'],
+                items: [
+                    { id: 'admin-users', label: 'Users', icon: '👥', link: 'admin/users.html' },
+                    { id: 'admin-banks', label: 'Bank Accounts', icon: '🏦', link: 'admin/banks.html' },
+                    { id: 'admin-logs', label: 'System Logs', icon: '📋', link: 'admin/logs.html' }
+                ]
+            },
+            {
                 header: 'Money Exchange',
                 roles: ['admin', 'exchange_user'],
                 items: [
@@ -278,6 +287,22 @@ class App {
         if (target) {
             target.classList.remove('hidden');
             this.handleViewLoad(viewId);
+        } else {
+            // If view section not found, check if it's a separate page request
+            // Map viewId to file path
+            const pageMap = {
+                'pharmacy-pos': 'modules/pharmacy/pos.html',
+                'exchange-buy': 'modules/exchange/buy.html',
+                'exchange-sell': 'modules/exchange/sell.html',
+                'construction-expense': 'modules/construction/expense.html',
+                'construction-income': 'modules/construction/income.html',
+                'admin-users': 'admin/users.html',
+                'admin-banks': 'admin/banks.html',
+                'admin-logs': 'admin/logs.html'
+            };
+            if (pageMap[viewId]) {
+                window.location.href = pageMap[viewId];
+            }
         }
     }
 

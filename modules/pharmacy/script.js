@@ -122,7 +122,63 @@ class PharmacyModule {
         this.renderCart();
 
         document.getElementById('add-btn').onclick = () => this.addToCart();
-        document.getElementById('checkout-btn').onclick = () => this.checkout();
+        
+        // Checkout Button - instead of direct checkout, show modal
+        const checkoutBtn = document.getElementById('checkout-btn');
+        const modal = document.getElementById('checkout-modal');
+        const closeBtn = modal.querySelector('.close-modal');
+        const checkoutForm = document.getElementById('checkout-form');
+        const pmRadios = checkoutForm.querySelectorAll('input[name="pm_method"]');
+        const bankDetails = document.getElementById('pm-bank-details');
+
+        checkoutBtn.onclick = () => {
+            if (this.cart.length === 0) return;
+            const total = this.cart.reduce((a, c) => a + (c.qty * c.price), 0);
+            document.getElementById('modal-total-due').textContent = `$${total.toFixed(2)}`;
+            
+            // Populate Banks
+            const allBanks = window.Store.get('bank_accounts') || [];
+            const phBanks = allBanks.filter(b => {
+                if(!b.sectors) return true;
+                if(Array.isArray(b.sectors)) return b.sectors.includes('pharmacy');
+                return b.sectors.includes('pharmacy') || b.sectors === 'all';
+            });
+            const bankSelect = checkoutForm.querySelector('select[name="pm_bank_id"]');
+            bankSelect.innerHTML = '<option value="">-- Select Bank --</option>' + 
+                phBanks.map(b => `<option value="${b.id}">${b.bank_name} - ${b.account_number}</option>`).join('');
+
+            modal.classList.remove('hidden');
+        };
+
+        closeBtn.onclick = () => modal.classList.add('hidden');
+
+        pmRadios.forEach(r => {
+            r.onchange = () => {
+                bankDetails.style.display = (r.value === 'bank') ? 'block' : 'none';
+                checkoutForm.querySelector('select[name="pm_bank_id"]').required = (r.value === 'bank');
+            };
+        });
+
+        checkoutForm.onsubmit = (e) => {
+            e.preventDefault();
+            const fd = new FormData(checkoutForm);
+            const payment = {
+                method: fd.get('pm_method'),
+                bank_id: fd.get('pm_bank_id')
+            };
+
+            // Get bank name for snapshot
+            if (payment.method === 'bank') {
+                const allBanks = window.Store.get('bank_accounts') || [];
+                const b = allBanks.find(x => x.id == payment.bank_id);
+                if (b) payment.bank_name = b.bank_name;
+            }
+
+            this.finalizeCheckout(payment);
+            modal.classList.add('hidden');
+            checkoutForm.reset();
+            bankDetails.style.display = 'none';
+        };
     }
 
     updatePosSelect() {
@@ -224,15 +280,19 @@ class PharmacyModule {
         this.renderCart();
     }
 
-    checkout() {
+    finalizeCheckout(paymentData) {
         if (this.cart.length === 0) return;
+        const total = this.cart.reduce((a, c) => a + (c.qty * c.price), 0);
         const sale = {
             items: this.cart.map(c => ({ itemId: c.itemId, name: c.name, qty: c.qty, orig_qty: c.orig_qty, orig_unit: c.orig_unit, price: c.price, buy_price: c.buy_price, unit_type: c.unit_type, description: c.description || '' })),
-            total: this.cart.reduce((a, c) => a + (c.qty * c.price), 0),
+            total: total,
             date: new Date().toISOString(),
-            user: (window.Auth && window.Auth.currentUser) ? window.Auth.currentUser.username : 'unknown'
+            user: (window.Auth && window.Auth.currentUser) ? window.Auth.currentUser.username : 'unknown',
+            payment_method: paymentData.method,
+            bank_account_id: paymentData.bank_id,
+            bank_name: paymentData.bank_name // Snapshot
         };
-        window.Store.add(this.salesKey, sale);
+        const savedSale = window.Store.add(this.salesKey, sale);
 
         const stock = window.Store.get(this.stockKey);
         this.cart.forEach(cartItem => {
@@ -241,16 +301,57 @@ class PharmacyModule {
         });
         window.Store.set(this.stockKey, stock);
 
-        // Log the activity
-        const actionType = 'Create';
-        const moduleName = 'pharmacy';
-        const details = `Sale completed: $${sale.total.toFixed(2)} - ${sale.items.length} item(s)`;
-        window.Store.logActivity(actionType, moduleName, details);
+        // Log
+        window.Store.logActivity('Create', 'pharmacy', `Sale completed: $${sale.total.toFixed(2)} (${paymentData.method})`);
 
         this.cart = [];
         this.renderCart();
         this.updatePosSelect();
-        alert('Sale Completed!');
+        
+        if (confirm('Sale Completed! Print Receipt?')) {
+            this.printReceipt(savedSale);
+        }
+    }
+
+    printReceipt(sale) {
+        const win = window.open('', '', 'width=400,height=600');
+        win.document.write(`
+            <html>
+            <head>
+                <title>Pharmacy Receipt</title>
+                <style>
+                    body { font-family: monospace; padding: 20px; }
+                    .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
+                    table { width: 100%; margin-bottom: 10px; border-collapse: collapse; }
+                    th { text-align: left; }
+                    .footer { text-align: center; margin-top: 20px; font-size: 0.8em; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h3>UniManage Pharmacy</h3>
+                    <p>Date: ${new Date(sale.date).toLocaleString()}</p>
+                    <p>Receipt: ${sale.id}</p>
+                </div>
+                <table>
+                    <thead><tr><th>Item</th><th>Qty</th><th>Price</th></tr></thead>
+                    <tbody>
+                        ${sale.items.map(i => `<tr><td>${i.name}</td><td>${i.orig_qty || i.qty}</td><td>$${(i.price * i.qty).toFixed(2)}</td></tr>`).join('')}
+                    </tbody>
+                </table>
+                <hr>
+                <div style="display:flex; justify-content:space-between; font-weight:bold;">
+                    <span>TOTAL:</span><span>$${sale.total.toFixed(2)}</span>
+                </div>
+                <hr>
+                <p>Payment: ${sale.payment_method.toUpperCase()}</p>
+                ${sale.bank_name ? `<p>Bank: ${sale.bank_name}</p>` : ''}
+                <div class="footer">Get well soon!</div>
+            </body>
+            </html>
+        `);
+        win.document.close();
+        win.print();
     }
 
     // --- Stock ---

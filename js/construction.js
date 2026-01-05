@@ -194,6 +194,7 @@ class ConstructionModule {
 
         const fd = new FormData(activeForm);
         const amount = parseFloat(fd.get('amount') || activeForm.querySelector('[name="amount"]')?.value || 0);
+        console.log(amount);
         const site = fd.get('site') || activeForm.querySelector('select')?.value || 'N/A';
 
         title.textContent = 'Finalize Payment';

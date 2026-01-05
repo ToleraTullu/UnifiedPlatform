@@ -60,6 +60,18 @@ class App {
                 notifModal.classList.add('hidden');
             });
         }
+        
+        // Generic Modal Close
+        const genericModal = document.getElementById('modal-container');
+        if (genericModal) {
+            genericModal.querySelector('.close-modal').addEventListener('click', () => {
+                genericModal.classList.add('hidden');
+            });
+            // Also close on click outside
+            window.addEventListener('click', (e) => {
+                if (e.target === genericModal) genericModal.classList.add('hidden');
+            });
+        }
 
         // Admin Dashboard Cards Redirection
         this.initCardRedirects();

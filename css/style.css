@@ -294,6 +294,49 @@ body {
     background: #FFF5F5;
 }
 
+.notif-item.orange {
+    border-left: 4px solid var(--secondary);
+    background: #FFFAF0;
+}
+
+/* Dashboard Activity Stream */
+.activity-list {
+    list-style: none;
+    padding: 0;
+}
+
+.activity-item {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    border-left: 4px solid var(--border-color); /* Fallback */
+    transition: background 0.2s;
+}
+
+.activity-item:hover {
+    background: rgba(0,0,0,0.02);
+}
+
+.activity-item.exchange { border-left-color: #3b82f6; }
+.activity-item.pharmacy { border-left-color: #10b981; }
+.activity-item.construction { border-left-color: #f59e0b; }
+
+.activity-time {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.activity-desc {
+    font-size: 0.9rem;
+    color: var(--text-main);
+    font-weight: 500;
+}
+
 .notif-time {
     font-size: 0.75rem;
     color: var(--text-muted);

@@ -100,45 +100,68 @@ class App {
         list.innerHTML = '';
         let count = 0;
 
-        // 1. Pharmacy Low Stock
-        const stock = await window.Store.get('pharmacy_items') || [];
-        const lowStock = stock.filter(i => i.qty < 10);
-        lowStock.forEach(i => {
-            count++;
-            list.innerHTML += `
-                <li class="notif-item warning">
-                    <div>
-                        <strong>Low Stock: ${i.name}</strong><br>
-                        <small>Only ${i.qty} left</small>
-                    </div>
-                </li>
-            `;
-        });
+        const role = this.currentUser.role;
+        const isAdmin = role === 'admin';
 
-        // 2. Pharmacy Expiry Alerts
-        const today = new Date();
-        const expiring = stock.filter(i => {
-            if (!i.exp_date) return false;
-            const exp = new Date(i.exp_date);
-            const diffTime = exp - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays < 30; // Alert if less than 30 days
-        });
+        // 1. Pharmacy Alerts (Admin or Pharmacy User)
+        if (isAdmin || role === 'pharmacy_user') {
+            const stock = await window.Store.get('pharmacy_items') || [];
+            const lowStock = stock.filter(i => i.qty < 10);
+            lowStock.forEach(i => {
+                count++;
+                list.innerHTML += `
+                    <li class="notif-item warning">
+                        <div>
+                            <strong>Low Stock: ${i.name}</strong><br>
+                            <small>Only ${i.qty} left</small>
+                        </div>
+                    </li>
+                `;
+            });
 
-        expiring.forEach(i => {
-            count++;
-            list.innerHTML += `
-                <li class="notif-item danger">
-                    <div>
-                        <strong>Expiring Soon: ${i.name}</strong><br>
-                        <small>Expires on ${i.exp_date}</small>
-                    </div>
-                </li>
-            `;
-        });
+            const today = new Date();
+            const expiring = stock.filter(i => {
+                if (!i.exp_date) return false;
+                const exp = new Date(i.exp_date);
+                const diffTime = exp - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return diffDays < 30;
+            });
 
-        // 3. Recent Activities (Mock)
-        // ... could add more alerts here
+            expiring.forEach(i => {
+                count++;
+                list.innerHTML += `
+                    <li class="notif-item danger">
+                        <div>
+                            <strong>Expiring Soon: ${i.name}</strong><br>
+                            <small>Expires on ${i.exp_date}</small>
+                        </div>
+                    </li>
+                `;
+            });
+        }
+
+        // 2. Exchange Alerts (Admin or Exchange User)
+        if (isAdmin || role === 'exchange_user') {
+            if (window.ExchangeModule && window.ExchangeModule.calculateHoldings) {
+                const vault = await window.ExchangeModule.calculateHoldings();
+                const thresholds = { USD: 1000, EUR: 1000, GBP: 1000, LOCAL: 10000 };
+                
+                Object.keys(thresholds).forEach(curr => {
+                    if (vault[curr] < thresholds[curr]) {
+                        count++;
+                        list.innerHTML += `
+                            <li class="notif-item orange">
+                                <div>
+                                    <strong>Low Holdings: ${curr === 'LOCAL' ? 'Local Cash' : curr}</strong><br>
+                                    <small>Holdings dropped to ${vault[curr].toLocaleString(undefined, { minimumFractionDigits: 2 })}</small>
+                                </div>
+                            </li>
+                        `;
+                    }
+                });
+            }
+        }
 
         if (count === 0) list.innerHTML = '<li class="empty-state">No new notifications</li>';
 
@@ -204,7 +227,7 @@ class App {
                     { id: 'exchange-buy', label: 'Buy Currency', icon: '📥', submenu: true },
                     { id: 'exchange-sell', label: 'Sell Currency', icon: '📤', submenu: true },
                     { id: 'exchange-holdings', label: 'Vault Holdings', icon: '🏦', submenu: true },
-                    { id: 'exchange-rates', label: 'Set Rates', icon: '⚙️', submenu: true },
+                    { id: 'exchange-rates', label: 'Set Rates', icon: '⚙️', submenu: true, allowedRoles: ['admin'] },
                     { id: 'exchange-records', label: 'Transactions', icon: '📝', submenu: true }
                 ]
             },
@@ -223,7 +246,7 @@ class App {
                 roles: ['admin', 'construction_user'],
                 items: [
                     { id: 'construction-dashboard', label: 'Dashboard', icon: '🏗️' },
-                    { id: 'construction-sites', label: 'Manage Sites', icon: '📍', submenu: true },
+                    { id: 'construction-sites', label: 'Manage Sites', icon: '📍', submenu: true, allowedRoles: ['admin'] },
                     { id: 'construction-expense', label: 'Log Expense', icon: '💸', submenu: true },
                     { id: 'construction-income', label: 'Log Income', icon: '💰', submenu: true },
                     { id: 'construction-records', label: 'Financials', icon: '📋', submenu: true }
@@ -255,6 +278,9 @@ class App {
 
                 // Populate Items
                 section.items.forEach(item => {
+                    // Check item-level roles
+                    if (item.allowedRoles && !this.hasAccess(item.allowedRoles)) return;
+
                     const li = document.createElement('li');
                     li.className = 'menu-item';
                     li.dataset.target = item.id;
@@ -286,6 +312,12 @@ class App {
     }
 
     navigateTo(viewId) {
+        // Enforce role-based access check before navigating
+        if (!this.canUserAccessView(viewId)) {
+            alert('Access Denied: You do not have permission to view this section.');
+            return;
+        }
+
         // Toggle Active State in Sidebar
         document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
         const link = document.querySelector(`.menu-item[data-target="${viewId}"]`);
@@ -300,6 +332,40 @@ class App {
             target.classList.remove('hidden');
             this.handleViewLoad(viewId);
         }
+    }
+
+    canUserAccessView(viewId) {
+        if (this.currentUser.role === 'admin') return true;
+
+        // Restriction mapping
+        const restrictions = {
+            'exchange-rates': ['admin'],
+            'construction-sites': ['admin'],
+            // Admin only modules
+            'admin-users': ['admin'],
+            'admin-banks': ['admin'],
+            'admin-logs': ['admin'],
+            'admin-analytics': ['admin'],
+            'admin-overview': ['admin']
+        };
+
+        if (restrictions[viewId]) {
+            return restrictions[viewId].includes(this.currentUser.role);
+        }
+
+        // Module-level check fallback
+        const module = viewId.split('-')[0];
+        const moduleRoles = {
+            'exchange': ['admin', 'exchange_user'],
+            'pharmacy': ['admin', 'pharmacy_user'],
+            'construction': ['admin', 'construction_user']
+        };
+
+        if (moduleRoles[module]) {
+            return moduleRoles[module].includes(this.currentUser.role);
+        }
+
+        return true;
     }
 
     async handleViewLoad(viewId) {
@@ -385,7 +451,7 @@ class App {
         const exTx = await window.Store.get('exchange_transactions') || [];
         activities = activities.concat(exTx.map(t => ({
             time: t.date,
-            desc: `Exchange: ${t.type.toUpperCase()} ${t.currency} ${t.amount}`,
+            desc: `Exchange: ${t.type.toUpperCase()} ${t.currency_code} ${parseFloat(t.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`,
             type: 'exchange'
         })));
 
@@ -393,7 +459,7 @@ class App {
         const phTx = await window.Store.get('pharmacy_sales') || [];
         activities = activities.concat(phTx.map(t => ({
             time: t.date ? t.date : new Date().toISOString(), // fallback
-            desc: `Pharmacy: Sale of $${t.total.toFixed(2)}`,
+            desc: `Pharmacy: Sale of ${t.total.toLocaleString(undefined, {style: 'currency', currency: 'USD'})}`,
             type: 'pharmacy'
         })));
 
@@ -401,10 +467,10 @@ class App {
         const coExp = await window.Store.get('construction_expenses') || [];
         const coInc = await window.Store.get('construction_income') || [];
         activities = activities.concat(coExp.map(t => ({
-            time: t.date, desc: `Construction: Expense - ${t.description}`, type: 'construction'
+            time: t.date, desc: `Construction: Expense - ${t.description} ($${t.amount.toFixed(2)})`, type: 'construction'
         })));
         activities = activities.concat(coInc.map(t => ({
-            time: t.date, desc: `Construction: Income - ${t.description}`, type: 'construction'
+            time: t.date, desc: `Construction: Income - ${t.description} ($${t.amount.toFixed(2)})`, type: 'construction'
         })));
 
         // Sort & Slice
@@ -413,9 +479,13 @@ class App {
 
         streamContainer.innerHTML = '';
         recent.forEach(act => {
+            const dt = new Date(act.time);
+            const dateStr = dt.toLocaleDateString(undefined, { month: 'short', day: '2-digit' });
+            const timeStr = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
             streamContainer.innerHTML += `
-                <li class="activity-item">
-                    <span class="activity-time">${new Date(act.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <li class="activity-item ${act.type}">
+                    <span class="activity-time">${dateStr}, ${timeStr}</span>
                     <span class="activity-desc">${act.desc}</span>
                 </li>
             `;

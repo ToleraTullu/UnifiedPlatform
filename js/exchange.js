@@ -72,6 +72,39 @@ class ExchangeModule {
     }
 
     // --- Data Helpers ---
+    async calculateHoldings() {
+        const txs = await window.Store.get(this.txKey) || [];
+        // Initial Vault (Seed)
+        const vault = {
+            USD: 10000,
+            EUR: 5000,
+            GBP: 5000,
+            LOCAL: 500000 
+        };
+
+        txs.forEach(tx => {
+            const amt = parseFloat(tx.amount || 0);
+            const rate = parseFloat(tx.rate || 0);
+            const total = parseFloat(tx.total || (amt * rate));
+            const code = (tx.currency_code || tx.currency || '').toUpperCase();
+
+            if (!code) return; // Skip invalid tx
+
+            const type = (tx.type || '').toLowerCase();
+
+            if (type === 'buy') {
+                if (vault[code] === undefined) vault[code] = 0;
+                vault[code] += amt;
+                vault.LOCAL -= total;
+            } else if (type === 'sell') {
+                if (vault[code] === undefined) vault[code] = 0;
+                vault[code] -= amt;
+                vault.LOCAL += total;
+            }
+        });
+        return vault;
+    }
+
     async getCurrencies() {
         const data = await window.Store.get(this.ratesKey);
         // Fallback for defaults if empty
@@ -126,30 +159,25 @@ class ExchangeModule {
         transactions.forEach(tx => {
             const amt = parseFloat(tx.amount) || 0;
             const rate = parseFloat(tx.rate) || 0;
+            const code = tx.currency_code; // Correct field name
 
-            if (stats[tx.type] && stats[tx.type][tx.currency] !== undefined) {
-                stats[tx.type][tx.currency] += amt;
+            if (stats[tx.type] && stats[tx.type][code] !== undefined) {
+                stats[tx.type][code] += amt;
             }
+            // Volume is the local cash equivalent moved
             totalVol += (amt * rate);
         });
 
         // Update Module Dashboard DOM
         const setTxt = (id, val) => {
             const el = document.getElementById(id);
-            if (el) el.textContent = val.toLocaleString();
+            if (el) el.textContent = val.toLocaleString(undefined, { minimumFractionDigits: 2 });
         };
 
-        // This is now hardcoded in HTML for USD/EUR/GBP only, which is fine for the 4-col layout
-        // Or we could make the dashboard grid dynamic?
-        // Let's keep existing logic but being aware stats might be 0 if currency deleted
-        // Note: The user might want to see TOP currencies logic later, for now we stick to fixed or dynamic?
-        // Based on user request "show top buy and sales daily and weekly", we'll improve that later.
-
-        // Populate standard placeholders if they exist
-        if (stats.buy.USD) setTxt('ex-buy-usd', stats.buy.USD.toFixed(2));
-        if (stats.sell.USD) setTxt('ex-sell-usd', stats.sell.USD.toFixed(2));
-        if (stats.buy.EUR) setTxt('ex-buy-eur', stats.buy.EUR.toFixed(2));
-        if (stats.sell.EUR) setTxt('ex-sell-eur', stats.sell.EUR.toFixed(2));
+        Object.keys(stats.buy).forEach(code => {
+            setTxt(`ex-buy-${code.toLowerCase()}`, stats.buy[code]);
+            setTxt(`ex-sell-${code.toLowerCase()}`, stats.sell[code]);
+        });
 
         // Update Global Stat
         const globalEl = document.getElementById('stat-exchange');
@@ -243,12 +271,23 @@ class ExchangeModule {
         const amountInput = this.activeForm.querySelector('[name="amount"]');
         const totalDisplay = document.getElementById('total-val');
 
-        currencySelect.addEventListener('change', () => {
+        currencySelect.addEventListener('change', async () => {
             const code = currencySelect.value;
             if (code && rates[code]) {
                 const suggested = type === 'buy' ? rates[code].buy : rates[code].sell;
                 rateInput.value = suggested;
                 document.getElementById('suggested-rate').textContent = `Suggested: ${suggested}`;
+                
+                if (type === 'sell') {
+                    const vault = await this.calculateHoldings();
+                    const available = vault[code] || 0;
+                    document.getElementById('suggested-rate').innerHTML += ` | <span style="color:var(--primary)">Max Available: ${available.toLocaleString(undefined, {minimumFractionDigits:2})}</span>`;
+                    amountInput.max = available;
+                } else if (type === 'buy') {
+                    const vault = await this.calculateHoldings();
+                    document.getElementById('suggested-rate').innerHTML += ` | <span style="color:var(--primary)">Local Cash: ${vault.LOCAL.toLocaleString(undefined, {minimumFractionDigits:2})}</span>`;
+                }
+                
                 calculateTotal();
             } else {
                 rateInput.value = '';
@@ -360,45 +399,94 @@ class ExchangeModule {
 
     async recordTransaction(type, paymentData) {
         const fd = new FormData(this.activeForm);
-        const transaction = {
-            id: Date.now(),
-            date: new Date().toISOString(),
-            type: type,
-            customer: fd.get('customer'),
-            cid: fd.get('cid'),
-            currency_code: fd.get('currency_code'),
-            amount: parseFloat(fd.get('amount')),
-            rate: parseFloat(fd.get('rate')),
-            total: (parseFloat(fd.get('amount')) * parseFloat(fd.get('rate'))).toFixed(2), // Calculate total here
-            description: fd.get('description'),
-            payment_method: paymentData.get('payment_method'),
-            bank_account_id: paymentData.get('bank_account_id'),
-            external_bank_name: paymentData.get('external_bank_name'),
-            external_account_number: paymentData.get('external_account_number'),
-            status: 'completed'
-        };
-
-        await window.Store.add(this.txKey, transaction);
+        const submitBtn = this.activeForm.querySelector('button[type="submit"]');
         
-        // Log activity
-        await window.Store.addActivityLog({
-            action_type: 'ADD',
-            module_name: 'Exchange',
-            details: `${type.toUpperCase()} ${transaction.amount} ${transaction.currency_code}`
-        });
+        const amount = parseFloat(fd.get('amount'));
+        const code = (fd.get('currency_code') || '').toUpperCase();
+        const rate = parseFloat(fd.get('rate'));
+        const total = (amount * rate);
 
-        // Hide modal
-        document.getElementById('modal-container').classList.add('hidden');
-
-        if (confirm('Transaction Recorded! Print Receipt?')) {
-            this.printReceipt(transaction);
+        if (isNaN(amount) || isNaN(rate) || !code) {
+            alert('Invalid transaction data. Please check inputs.');
+            return;
         }
 
-        // Navigate back or reload
-        if (window.App && typeof window.App.navigateTo === 'function') {
-            window.App.navigateTo('exchange-dashboard'); // Changed to exchange-dashboard
-        } else {
-            window.location.href = '../../dashboard.html#exchange'; // Fallback for multi-page
+        // Disable button to prevent double-click
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+        }
+
+        try {
+            // Safety Check for Selling
+            const vault = await this.calculateHoldings();
+            if (type === 'sell') {
+                if (vault[code] === undefined || vault[code] < amount) {
+                    alert(`Insufficient Holdings! You only have ${vault[code] !== undefined ? vault[code].toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'} ${code} available.`);
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Record Sale';
+                    }
+                    return;
+                }
+            } else if (type === 'buy') {
+                if (vault.LOCAL < total) {
+                    alert(`Insufficient Local Cash! You only have ${vault.LOCAL.toLocaleString(undefined, { minimumFractionDigits: 2 })} ETB available to buy ${code}.`);
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Record Purchase';
+                    }
+                    return;
+                }
+            }
+
+            const transaction = {
+                id: Date.now(),
+                date: new Date().toISOString(),
+                type: type,
+                customer: fd.get('customer'),
+                cid: fd.get('cid'),
+                currency_code: code,
+                amount: amount,
+                rate: rate,
+                total: total.toFixed(2), 
+                description: fd.get('description'),
+                payment_method: paymentData.get('payment_method'),
+                bank_account_id: paymentData.get('bank_account_id'),
+                external_bank_name: paymentData.get('external_bank_name'),
+                external_account_number: paymentData.get('external_account_number'),
+                status: 'completed'
+            };
+
+            await window.Store.add(this.txKey, transaction);
+            
+            // Log activity
+            await window.Store.addActivityLog({
+                action_type: 'ADD',
+                module_name: 'Exchange',
+                details: `${type.toUpperCase()} ${transaction.amount} ${transaction.currency_code}`
+            });
+
+            // Hide modal
+            document.getElementById('modal-container').classList.add('hidden');
+
+            if (confirm('Transaction Recorded! Print Receipt?')) {
+                this.printReceipt(transaction);
+            }
+
+            // Navigate back or reload
+            if (window.App && typeof window.App.navigateTo === 'function') {
+                window.App.navigateTo('exchange-dashboard');
+            } else {
+                window.location.href = '../../dashboard.html#exchange';
+            }
+        } catch (err) {
+            console.error('Transaction failed:', err);
+            alert('An error occurred while recording the transaction.');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = type === 'buy' ? 'Record Purchase' : 'Record Sale';
+            }
         }
     }
 
@@ -446,36 +534,14 @@ class ExchangeModule {
     }
 
     // --- Holdings ---
+
     async renderHoldings() {
-        const txs = await window.Store.get(this.txKey) || [];
+        const vault = await this.calculateHoldings();
 
-        // Initial Vault (Seed) - could be in store, for now hardcoded base
-        const vault = {
-            USD: 10000,
-            EUR: 5000,
-            GBP: 5000,
-            LOCAL: 500000 // Initial Cash Reserve
-        };
-
-        txs.forEach(tx => {
-            const amt = tx.amount;
-            const total = tx.amount * tx.rate;
-
-            if (tx.type === 'buy') {
-                // We BOUGHT Foreign Currency (Stock In) -> We PAID Local
-                if (vault[tx.currency_code] !== undefined) vault[tx.currency_code] += amt;
-                vault.LOCAL -= total;
-            } else {
-                // We SOLD Foreign Currency (Stock Out) -> We EARNED Local
-                if (vault[tx.currency_code] !== undefined) vault[tx.currency_code] -= amt;
-                vault.LOCAL += total;
-            }
-        });
-
-        document.getElementById('ex-holdings-usd').textContent = vault.USD.toLocaleString();
-        document.getElementById('ex-holdings-eur').textContent = vault.EUR.toLocaleString();
-        document.getElementById('ex-holdings-gbp').textContent = vault.GBP.toLocaleString();
-        document.getElementById('ex-holdings-local').textContent = vault.LOCAL.toLocaleString();
+        document.getElementById('ex-holdings-usd').textContent = vault.USD.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        document.getElementById('ex-holdings-eur').textContent = vault.EUR.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        document.getElementById('ex-holdings-gbp').textContent = vault.GBP.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        document.getElementById('ex-holdings-local').textContent = vault.LOCAL.toLocaleString(undefined, { minimumFractionDigits: 2 });
     }
 
     // --- Admin Rates (Dynamic) ---

@@ -347,8 +347,8 @@ class ConstructionModule {
 
     // --- Records ---
     async renderRecords() {
-        const expenses = (await window.Store.get(this.expenseKey) || []).map(i => ({ ...i, cat: 'expense' }));
-        const incomes = (await window.Store.get(this.incomeKey) || []).map(i => ({ ...i, cat: 'income' }));
+        const expenses = (await window.Store.get(this.expKey) || []).map(i => ({ ...i, cat: 'expense' }));
+        const incomes = (await window.Store.get(this.incKey) || []).map(i => ({ ...i, cat: 'income' }));
         const all = [...expenses, ...incomes];
 
         all.sort((a, b) => new Date(b.date) - new Date(a.date));

@@ -359,11 +359,16 @@ body {
     grid-template-columns: repeat(4, 1fr);
 }
 
-/* Mobile Responsiveness */
-@media (max-width: 900px) {
-    .four-col {
-        grid-template-columns: repeat(2, 1fr);
-    }
+/* Grid Layout for Forms/Lists */
+.grid-layout {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+@media (max-width: 1024px) {
+    .grid-layout { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
@@ -529,6 +534,19 @@ select:focus {
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.badge-exchange { background: #e0e7ff; color: #4338ca; }
+.badge-pharmacy { background: #dcfce7; color: #15803d; }
+.badge-construction { background: #fef9c3; color: #854d0e; }
 
 /* Modal */
 .modal {

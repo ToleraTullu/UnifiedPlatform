@@ -418,6 +418,17 @@ class PharmacyModule {
         const descEl = document.getElementById('st-description');
         if (descEl) descEl.value = item ? (item.description || '') : '';
 
+        // Restrict dates to today only
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('st-manuf').min = today;
+        document.getElementById('st-manuf').max = today;
+        document.getElementById('st-expiry').min = today;
+        document.getElementById('st-expiry').max = today;
+        if (!item) { // For new items, set default to today
+            document.getElementById('st-manuf').value = today;
+            document.getElementById('st-expiry').value = today;
+        }
+
         modal.classList.remove('hidden');
         modal.querySelector('.close-modal').onclick = () => modal.classList.add('hidden');
 

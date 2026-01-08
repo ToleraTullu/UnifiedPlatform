@@ -53,6 +53,15 @@ class ConstructionModule {
     initForm(type) {
         const form = document.querySelector('form');
         
+        // Restrict date to today only
+        const dateInput = form.querySelector('input[name="date"]');
+        if (dateInput) {
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.min = today;
+            dateInput.max = today;
+            dateInput.value = today;
+        }
+        
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             this.showPaymentModal(type, form);

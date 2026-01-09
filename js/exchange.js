@@ -141,11 +141,16 @@ class ExchangeModule {
 
     // --- Dashboard ---
     renderDashboard() {
-        const currencies = this.getCurrencies();
+        const currencies = this.getCurrencies(); // Note: this is async but we don't await here, updateStats is async
         this.updateStats();
     }
 
     async updateStats() {
+        // Show loader on stats cards if empty? 
+        // Better to just let them update naturally. 
+        // But for "Global" stat which might take time:
+        // UI.showLoader('#stat-exchange'); // Example usage if needed, but text replacement is usually instant here.
+        
         const transactions = await window.Store.get(this.txKey) || [];
 
         // Calculate totals by type and currency
@@ -407,7 +412,7 @@ class ExchangeModule {
         const total = (amount * rate);
 
         if (isNaN(amount) || isNaN(rate) || !code) {
-            alert('Invalid transaction data. Please check inputs.');
+            UI.error('Invalid transaction data. Please check inputs.');
             return;
         }
 
@@ -422,7 +427,7 @@ class ExchangeModule {
             const vault = await this.calculateHoldings();
             if (type === 'sell') {
                 if (vault[code] === undefined || vault[code] < amount) {
-                    alert(`Insufficient Holdings! You only have ${vault[code] !== undefined ? vault[code].toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'} ${code} available.`);
+                    UI.error(`Insufficient Holdings! You only have ${vault[code] !== undefined ? vault[code].toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'} ${code} available.`);
                     if (submitBtn) {
                         submitBtn.disabled = false;
                         submitBtn.textContent = 'Record Sale';
@@ -431,7 +436,7 @@ class ExchangeModule {
                 }
             } else if (type === 'buy') {
                 if (vault.LOCAL < total) {
-                    alert(`Insufficient Local Cash! You only have ${vault.LOCAL.toLocaleString(undefined, { minimumFractionDigits: 2 })} ETB available to buy ${code}.`);
+                    UI.error(`Insufficient Local Cash! You only have ${vault.LOCAL.toLocaleString(undefined, { minimumFractionDigits: 2 })} ETB available to buy ${code}.`);
                     if (submitBtn) {
                         submitBtn.disabled = false;
                         submitBtn.textContent = 'Record Purchase';
@@ -480,9 +485,10 @@ class ExchangeModule {
             } else {
                 window.location.href = '../../dashboard.html#exchange';
             }
+            UI.success('Transaction Recorded Successfully!');
         } catch (err) {
             console.error('Transaction failed:', err);
-            alert('An error occurred while recording the transaction.');
+            UI.error('An error occurred while recording the transaction.');
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.textContent = type === 'buy' ? 'Record Purchase' : 'Record Sale';
@@ -598,7 +604,7 @@ class ExchangeModule {
         const code = document.getElementById('new-code').value.toUpperCase();
         const buy = parseFloat(document.getElementById('new-buy').value);
         const sell = parseFloat(document.getElementById('new-sell').value);
-        if (!code || isNaN(buy) || isNaN(sell)) return alert('Invalid Input');
+        if (!code || isNaN(buy) || isNaN(sell)) return UI.error('Invalid Input');
 
         const list = await this.getCurrencies();
         list.push({ code, buy, sell });
@@ -629,14 +635,28 @@ class ExchangeModule {
         });
 
         await this.setCurrencies(newList);
-        alert('Rates Saved!');
+        UI.success('Rates Saved!');
     }
 
     // --- Records ---
     async renderRecords() {
+        const container = document.querySelector('#view-exchange-records .card'); 
+        UI.showLoader(container);
+
         const transactions = await window.Store.get(this.txKey) || [];
         const tbody = document.getElementById('exchange-records-body');
         tbody.innerHTML = '';
+        
+        const isAdmin = window.Auth && window.Auth.currentUser && window.Auth.currentUser.role === 'admin';
+        
+        // Update header if needed (once)
+        const theadRow = document.querySelector('#view-exchange-records thead tr');
+        if (isAdmin && theadRow && !theadRow.querySelector('.th-action')) {
+            const th = document.createElement('th');
+            th.className = 'th-action';
+            th.textContent = 'Actions';
+            theadRow.appendChild(th);
+        }
 
         // Sort by date desc
         transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -651,9 +671,25 @@ class ExchangeModule {
                 <td>${parseFloat(tx.amount).toFixed(2)}</td>
                 <td>${parseFloat(tx.rate).toFixed(4)}</td>
                 <td>${(parseFloat(tx.amount) * parseFloat(tx.rate)).toFixed(2)}</td>
+                ${isAdmin ? `<td><button class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="window.ExchangeModule.deleteTransaction(${tx.id})">Delete</button></td>` : ''}
             `;
             tbody.appendChild(tr);
         });
+        
+        UI.hideLoader(container);
+    }
+    
+    async deleteTransaction(id) {
+        if (!confirm('Are you sure you want to delete this transaction? This will affect your holdings.')) return;
+        
+        const success = await window.Store.remove(this.txKey, id);
+        if (success) {
+            UI.success('Transaction deleted.');
+            this.renderRecords();
+            this.updateStats(); // Refresh stats/holdings
+        } else {
+            UI.error('Failed to delete transaction.');
+        }
     }
 }
 

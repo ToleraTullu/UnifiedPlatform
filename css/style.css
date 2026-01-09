@@ -635,6 +635,7 @@ select:focus {
     font-weight: 500;
 }
 
+/* Close Modal */
 .close-modal {
     position: absolute;
     top: 1rem;
@@ -642,4 +643,82 @@ select:focus {
     font-size: 1.5rem;
     cursor: pointer;
     color: var(--text-muted);
+}
+
+/* --- UI Utilities (Toasts & Loaders) --- */
+
+/* Toast Container */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Toast Message */
+.toast-message {
+    background: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 300px;
+    transform: translateX(120%);
+    transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    border-left: 5px solid #ccc;
+}
+
+.toast-message.show {
+    transform: translateX(0);
+}
+
+.toast-message.success { border-left-color: var(--success); }
+.toast-message.error { border-left-color: var(--danger); }
+.toast-message.warning { border-left-color: var(--warning); }
+.toast-message.info { border-left-color: var(--info); }
+
+.toast-icon { font-size: 1.2rem; }
+.toast-text { color: var(--text-main); font-weight: 500; font-size: 0.95rem; flex: 1; }
+.toast-close { cursor: pointer; color: var(--text-muted); font-size: 1.2rem; transition: color 0.2s; }
+.toast-close:hover { color: var(--text-main); }
+
+/* Loader */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 50;
+    border-radius: inherit;
+    backdrop-filter: blur(1px);
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-left-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive Tables */
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }

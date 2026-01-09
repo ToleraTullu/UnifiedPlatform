@@ -68,6 +68,18 @@ class AsyncStore {
         return item;
     }
 
+    async remove(key, id) {
+        await new Promise(r => setTimeout(r, 50));
+        const list = await this.get(key) || [];
+        if (!Array.isArray(list)) return false;
+        
+        const newList = list.filter(item => item.id != id);
+        if (newList.length === list.length) return false; // No item removed
+        
+        localStorage.setItem(key, JSON.stringify(newList));
+        return true;
+    }
+
     async set(key, value) {
         await new Promise(r => setTimeout(r, 50));
         localStorage.setItem(key, JSON.stringify(value));

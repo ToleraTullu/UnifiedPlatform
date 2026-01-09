@@ -114,7 +114,7 @@ class PharmacyModule {
         const unitType = document.getElementById('pos-unit-select').value; // Need to add this to HTML
 
         if (!itemId || qty <= 0) {
-            alert('Please select an item and valid quantity');
+            UI.error('Please select an item and valid quantity');
             return;
         }
 
@@ -162,7 +162,7 @@ class PharmacyModule {
         }
 
         if (stockItem.qty < deduction) {
-            alert(`Insufficient Stock! Need ${deduction} items, have ${stockItem.qty}.`);
+            UI.error(`Insufficient Stock! Need ${deduction} items, have ${stockItem.qty}.`);
             return;
         }
 
@@ -483,11 +483,25 @@ class PharmacyModule {
 
     // --- Records ---
     async renderRecords() {
+        const container = document.querySelector('#view-pharmacy-records .card');
+        UI.showLoader(container);
+
         const sales = await window.Store.get(this.salesKey) || [];
         const tbody = document.getElementById('pharmacy-records-body');
         if (!tbody) return;
         tbody.innerHTML = '';
-1
+        
+        const isAdmin = window.Auth && window.Auth.currentUser && window.Auth.currentUser.role === 'admin';
+        
+        // Update header if needed
+        const theadRow = document.querySelector('#view-pharmacy-records thead tr');
+        if (isAdmin && theadRow && !theadRow.querySelector('.th-action')) {
+            const th = document.createElement('th');
+            th.className = 'th-action';
+            th.innerHTML = 'Actions';
+            theadRow.appendChild(th);
+        }
+
         sales.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         sales.forEach(s => {
@@ -497,9 +511,27 @@ class PharmacyModule {
                 <td>${new Date(s.date).toLocaleString()}</td>
                 <td>${itemNames}</td>
                 <td>$${parseFloat(s.total).toFixed(2)}</td>
+                ${isAdmin ? `<td><button class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="window.PharmacyModule.deleteSale(${s.id})">Delete</button></td>` : ''}
             `;
             tbody.appendChild(tr);
         });
+        
+        UI.hideLoader(container);
+    }
+    
+    async deleteSale(id) {
+        if (!confirm('Are you sure you want to delete this sales record? Stock will not be automatically restored in this version.')) return;
+        // Ideally we should restore stock here.
+        // For now, simpler implementation as per plan: Delete Record Only.
+        
+        const success = await window.Store.remove(this.salesKey, id);
+        if (success) {
+            UI.success('Sale record deleted.');
+            this.renderRecords();
+            this.renderDashboard(); // Update stats
+        } else {
+            UI.error('Failed to delete sale.');
+        }
     }
 }
 

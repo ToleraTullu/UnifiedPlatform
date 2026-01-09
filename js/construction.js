@@ -92,7 +92,9 @@ class ConstructionModule {
 
             await this.saveSite({ name, status });
 
-            alert('Site Added Successfully');
+            await this.saveSite({ name, status });
+
+            UI.success('Site Added Successfully');
             close();
             this.renderSites(); // Refresh list if visible
         };
@@ -174,7 +176,7 @@ class ConstructionModule {
                     const siteId = type === 'expense' ? 'exp-site' : 'inc-site';
                     const siteVal = document.getElementById(siteId).value;
                     if (!siteVal) {
-                        alert("Please select a Site.");
+                        UI.error("Please select a Site.");
                         return;
                     }
 
@@ -347,9 +349,24 @@ class ConstructionModule {
 
     // --- Records ---
     async renderRecords() {
-        const expenses = (await window.Store.get(this.expKey) || []).map(i => ({ ...i, cat: 'expense' }));
-        const incomes = (await window.Store.get(this.incKey) || []).map(i => ({ ...i, cat: 'income' }));
+        const container = document.querySelector('#view-construction-records .card');
+        UI.showLoader(container);
+
+        // Fetch Both to list
+        let expenses = (await window.Store.get(this.expKey) || []).map(i => ({ ...i, cat: 'expense' }));
+        let incomes = (await window.Store.get(this.incKey) || []).map(i => ({ ...i, cat: 'income' }));
         const all = [...expenses, ...incomes];
+        
+        const isAdmin = window.Auth && window.Auth.currentUser && window.Auth.currentUser.role === 'admin';
+        
+        // Header
+        const theadRow = document.querySelector('#view-construction-records thead tr');
+        if (isAdmin && theadRow && !theadRow.querySelector('.th-action')) {
+            const th = document.createElement('th');
+            th.className = 'th-action';
+            th.textContent = 'Actions';
+            theadRow.appendChild(th);
+        }
 
         all.sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -360,6 +377,7 @@ class ConstructionModule {
 
         if (all.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No records found.</td></tr>';
+            UI.hideLoader(container);
             return;
         }
 
@@ -378,9 +396,28 @@ class ConstructionModule {
                 <td style="color:${color}; font-weight:600">
                     ${tx.cat === 'income' ? '+' : '-'}${tx.amount.toFixed(2)}
                 </td>
+                ${isAdmin ? `<td><button class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="window.ConstructionModule.deleteTransaction(${tx.id}, '${tx.cat}')">Delete</button></td>` : ''}
             `;
             tbody.appendChild(tr);
         });
+        
+        UI.hideLoader(container);
+    }
+
+    async deleteTransaction(id, cat) {
+         if (!confirm('Are you sure you want to delete this record?')) return;
+         
+         const key = cat === 'expense' ? this.expKey : this.incKey;
+         const success = await window.Store.remove(key, id);
+         
+         if (success) {
+             UI.success('Record deleted.');
+             this.renderRecords();
+             this.updateStats();
+             this.renderDashboard();
+         } else {
+             UI.error('Failed to delete record.');
+         }
     }
 }
 

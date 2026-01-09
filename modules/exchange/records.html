@@ -16,7 +16,12 @@
             <header class="topbar"></header>
             <div class="content-wrapper">
                 <div class="card">
-                    <h3>Transaction History</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3>Transaction History</h3>
+                        <div id="admin-controls" style="display: none;">
+                            <button id="clear-all-btn" class="btn-danger" onclick="window.ExchangeModule.clearAllTransactions()">Clear All Transactions</button>
+                        </div>
+                    </div>
                     <table class="data-table">
                         <thead>
                             <tr>
@@ -28,6 +33,7 @@
                                 <th>Amount</th>
                                 <th>Rate</th>
                                 <th>Total</th>
+                                <th id="actions-header" style="display: none;">Actions</th>
                             </tr>
                         </thead>
                         <tbody></tbody>

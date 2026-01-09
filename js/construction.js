@@ -33,6 +33,15 @@ class ConstructionModule {
             case 'expense':
             case 'income':
                 this.populateSiteSelects();
+                // Restrict date to today only
+                const today = new Date().toISOString().split('T')[0];
+                const dateInputId = action === 'expense' ? 'exp-date' : 'inc-date';
+                const dateInput = document.getElementById(dateInputId);
+                if (dateInput) {
+                    dateInput.min = today;
+                    dateInput.max = today;
+                    dateInput.value = today; // Set default to today
+                }
                 break;
             case 'records':
                 this.renderRecords();

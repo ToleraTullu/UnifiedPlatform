@@ -392,9 +392,16 @@ class ExchangeModule {
         const tbody = document.querySelector('tbody');
         tbody.innerHTML = '';
 
+        // Check if user is admin
+        const isAdmin = window.Auth && window.Auth.currentUser && window.Auth.currentUser.role === 'admin';
+        const adminControls = document.getElementById('admin-controls');
+        const actionsHeader = document.getElementById('actions-header');
+        if (adminControls) adminControls.style.display = isAdmin ? 'block' : 'none';
+        if (actionsHeader) actionsHeader.style.display = isAdmin ? 'table-cell' : 'none';
+
         transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        transactions.forEach(tx => {
+        transactions.forEach((tx, index) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${new Date(tx.date).toLocaleString()}</td>
@@ -405,6 +412,7 @@ class ExchangeModule {
                 <td>${tx.amount.toFixed(2)}</td>
                 <td>${tx.rate.toFixed(4)}</td>
                 <td>${(tx.amount * tx.rate).toFixed(2)}</td>
+                ${isAdmin ? `<td><button class="btn-danger" onclick="window.ExchangeModule.deleteTransaction(${index})">Delete</button></td>` : ''}
             `;
             tbody.appendChild(tr);
         });
@@ -491,6 +499,20 @@ class ExchangeModule {
         tbl.appendChild(tb);
         body.appendChild(tbl);
         modal.classList.remove('hidden');
+    }
+
+    deleteTransaction(index) {
+        if (!confirm('Are you sure you want to delete this transaction?')) return;
+        const transactions = window.Store.get(this.storeKey) || [];
+        transactions.splice(index, 1);
+        window.Store.set(this.storeKey, transactions);
+        this.initRecords();
+    }
+
+    clearAllTransactions() {
+        if (!confirm('Are you sure you want to clear ALL transactions? This action cannot be undone.')) return;
+        window.Store.set(this.storeKey, []);
+        this.initRecords();
     }
 }
 

@@ -203,13 +203,32 @@ class PharmacyModule {
         // Show details when selection changes
         select.onchange = () => {
             const info = document.getElementById('pos-item-info');
+            const priceDisplay = document.getElementById('pos-price-display');
             const id = parseInt(select.value);
-            if (!id) { if (info) info.textContent = 'Select an item to see details'; return; }
+            if (!id) { if (info) info.textContent = 'Select an item to see details'; if (priceDisplay) priceDisplay.textContent = ' '; return; }
             const it = items.find(x => x.id === id);
-            if (!it) { if (info) info.textContent = 'Item not found'; return; }
+            if (!it) { if (info) info.textContent = 'Item not found'; if (priceDisplay) priceDisplay.textContent = ' '; return; }
             const unit = it.unit_type === 'box' ? `${Math.floor(it.qty / (it.pieces_per_box||1))} boxes (${it.qty} pcs)` : (it.unit_type === 'liquid' ? `${it.qty} L` : `${it.qty} pcs`);
             if (info) info.textContent = `${it.name} — ${unit} — Exp: ${it.expiry_date || '-'} `;
+            if (priceDisplay) priceDisplay.textContent = ' ';
         };
+
+        // Bind Show Prices button
+        const priceBtn = document.getElementById('pos-show-prices-btn');
+        const priceDisplay = document.getElementById('pos-price-display');
+        if (priceBtn) {
+            priceBtn.onclick = () => {
+                const id = parseInt(select.value);
+                if (!id) { if (priceDisplay) priceDisplay.textContent = 'Select an item first'; return; }
+                const p = this.getPricesForItem(id);
+                if (!p) { if (priceDisplay) priceDisplay.textContent = 'Item not found'; return; }
+                if (p.itemsPerBox && p.itemsPerBox > 1) {
+                    if (priceDisplay) priceDisplay.textContent = `Per item: $${p.perItem.toFixed(2)} — Per box (${p.itemsPerBox}): $${p.perBox.toFixed(2)}`;
+                } else {
+                    if (priceDisplay) priceDisplay.textContent = `Per item: $${p.perItem.toFixed(2)}`;
+                }
+            };
+        }
     }
 
     addToCart() {
@@ -273,6 +292,16 @@ class PharmacyModule {
             list.innerHTML += `<li><div><strong>${item.name}</strong> x${dispQty}${desc}</div><div>$${itemTotal.toFixed(2)} <button onclick="window.PharmacyModule.removeFromCart(${idx})" style="color:red;border:none;background:none;cursor:pointer">×</button></div></li>`;
         });
         totalEl.textContent = total.toFixed(2);
+    }
+
+    getPricesForItem(itemId) {
+        const items = window.Store.get(this.stockKey) || [];
+        const it = items.find(i => i.id === itemId);
+        if (!it) return null;
+        const sell = (it.sell_price !== undefined && it.sell_price !== null) ? it.sell_price : (it.buy_price * 1.5 || 0);
+        const itemsPerBox = it.pieces_per_box || it.items_per_unit || 1;
+        const perBox = sell * (itemsPerBox || 1);
+        return { perItem: sell, perBox, itemsPerBox };
     }
 
     removeFromCart(idx) {
@@ -361,6 +390,39 @@ class PharmacyModule {
         // Modal logic moved to page or handled here? 
         // Let's assume the page has the modal HTML and we just bind events
         window.openStockModal = (id) => this.openStockModal(id);
+        // Bulk edit descriptions binding
+        const bulkBtn = document.getElementById('bulk-edit-desc-btn');
+        const bulkModal = document.getElementById('bulk-desc-modal');
+        const bulkList = document.getElementById('bulk-desc-list');
+        const bulkSave = document.getElementById('bulk-desc-save');
+        if (bulkBtn && bulkModal) {
+            bulkBtn.onclick = () => {
+                const items = window.Store.get(this.stockKey) || [];
+                bulkList.innerHTML = items.map(it => `
+                    <div style="margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:6px;">
+                        <div style="font-weight:600">${it.name} (ID: ${it.id})</div>
+                        <textarea data-item-id="${it.id}" style="width:100%; height:60px;">${(it.description||'')}</textarea>
+                    </div>
+                `).join('');
+                bulkModal.classList.remove('hidden');
+                // close buttons
+                bulkModal.querySelectorAll('.close-modal').forEach(b=>b.onclick=()=>bulkModal.classList.add('hidden'));
+            };
+        }
+        if (bulkSave && bulkModal) {
+            bulkSave.onclick = () => {
+                const items = window.Store.get(this.stockKey) || [];
+                const areas = bulkModal.querySelectorAll('textarea[data-item-id]');
+                areas.forEach(a => {
+                    const id = parseInt(a.getAttribute('data-item-id'));
+                    const idx = items.findIndex(i=>i.id===id);
+                    if (idx!==-1) items[idx].description = a.value;
+                });
+                window.Store.set(this.stockKey, items);
+                bulkModal.classList.add('hidden');
+                this.renderStockList();
+            };
+        }
     }
 
     renderStockList() {

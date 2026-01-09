@@ -369,7 +369,7 @@ class PharmacyModule {
                     <b>${item.name}</b><br>
                     <small class="text-muted">Batch: ${item.batch || '-'}</small>
                 </td>
-                <td>${item.buy_price}</td>
+                <td>$${(item.sell_price || (item.buy_price * 1.5)).toFixed(2)} per ${item.unit_type || 'item'}</td>
                 <td>${item.qty} ${item.unit_type || 'Items'}</td>
                 <td>${item.exp_date || '-'}</td>
                 <td>

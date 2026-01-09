@@ -17,6 +17,7 @@
             <div class="content-wrapper">
                 <div class="action-bar">
                     <button id="add-new-item-btn" class="btn-primary" onclick="window.openStockModal()">+ Add New Item</button>
+                    <button id="bulk-edit-desc-btn" class="btn-secondary" style="margin-left:8px;">Edit All Descriptions</button>
                 </div>
                 <div class="card">
                     <table class="data-table">
@@ -74,6 +75,19 @@
                         <div class="form-group"><label>Manufacture Date</label><input type="date" id="st-manuf"></div>
                         <div class="form-group"><label>Expiry Date</label><input type="date" id="st-expiry"></div>
                     <button type="submit" class="btn-primary">Save</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="bulk-desc-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Edit All Descriptions</h2>
+            <div id="bulk-desc-body" style="max-height:60vh; overflow:auto;">
+                <form id="bulk-desc-form">
+                    <div id="bulk-desc-list"></div>
+                    <div style="display:flex; gap:8px; margin-top:12px;"><button type="button" id="bulk-desc-save" class="btn-primary">Save All</button><button type="button" class="close-modal btn-secondary">Cancel</button></div>
                 </form>
             </div>
         </div>

@@ -13,9 +13,9 @@ class PharmacyModule {
 
     initListeners() {
         document.addEventListener('click', (e) => {
-            if(e.target.id === 'btn-pos-add') this.addToCart();
-            if(e.target.id === 'btn-pos-checkout') this.checkout();
-            if(e.target.id === 'btn-stock-add') this.openStockModal();
+            if (e.target.id === 'btn-pos-add') this.addToCart();
+            if (e.target.id === 'btn-pos-checkout') this.checkout();
+            if (e.target.id === 'btn-stock-add') this.openStockModal();
             // Modal Listeners could be here or dynamic
         });
     }
@@ -57,6 +57,13 @@ class PharmacyModule {
         const lowStock = stock.filter(i => i.qty < 10).length;
 
         document.getElementById('ph-today-sales').textContent = todaySales.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+
+        // Credit Sales (Outstanding)
+        const creditSales = sales
+            .filter(s => s.payment_method === 'credit')
+            .reduce((acc, curr) => acc + curr.total, 0);
+        document.getElementById('ph-credit-sales').textContent = creditSales.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+
         document.getElementById('ph-low-stock').textContent = lowStock;
 
         this.updateStats(); // Also sync global
@@ -219,9 +226,9 @@ class PharmacyModule {
         // Fetch Banks
         const allBanks = await window.Store.get('bank_accounts') || [];
         const banks = allBanks.filter(b => {
-             if(!b.sectors) return true;
-             if(Array.isArray(b.sectors)) return b.sectors.includes('pharmacy');
-             return b.sectors.includes('pharmacy') || b.sectors === 'all';
+            if (!b.sectors) return true;
+            if (Array.isArray(b.sectors)) return b.sectors.includes('pharmacy');
+            return b.sectors.includes('pharmacy') || b.sectors === 'all';
         });
         const bankOps = banks.map(b => `<option value="${b.id}">${b.bank_name}</option>`).join('');
 
@@ -237,6 +244,7 @@ class PharmacyModule {
                     <div style="display:flex; gap:20px; margin-top:5px;">
                         <label><input type="radio" name="payment_method" value="cash" checked> Cash</label>
                         <label><input type="radio" name="payment_method" value="bank"> Bank</label>
+                        <label><input type="radio" name="payment_method" value="credit"> Credit</label>
                     </div>
                 </div>
                 <div id="ph-bank-group" style="display:none;" class="form-group">
@@ -266,11 +274,11 @@ class PharmacyModule {
             e.preventDefault();
             const pMethod = payForm.querySelector('input[name="payment_method"]:checked').value;
             const bankId = payForm.bank_account_id.value;
-            
+
             let bankName = '';
-            if(bankId && banks.length) {
+            if (bankId && banks.length) {
                 const b = banks.find(x => x.id == bankId);
-                if(b) bankName = b.bank_name;
+                if (b) bankName = b.bank_name;
             }
 
             const sale = {
@@ -283,19 +291,19 @@ class PharmacyModule {
             };
 
             const newSale = await window.Store.add(this.salesKey, sale);
-            
+
             await window.Store.addActivityLog({
                 action_type: 'PHARMACY_SALE',
                 module_name: 'Pharmacy',
                 details: `Sale completed: $${total.toFixed(2)}`
             });
-            
+
             modal.classList.add('hidden');
             this.cart = [];
             this.renderCart();
             this.updatePosSelect();
 
-            if(confirm('Sale Completed! Print Receipt?')) {
+            if (confirm('Sale Completed! Print Receipt?')) {
                 this.printReceipt(newSale);
             }
         };
@@ -470,13 +478,13 @@ class PharmacyModule {
         // Logic change: We send data to API via Store.add (which uses POST)
         // Store.add in new implementation handles both Add and Update if API supports it.
         // Our PHP API Pharmacy 'stock' endpoints merges if ID exists.
-        
+
         let payload = {
-             ...formData,
-             // Ensure ID is passed if editing
-             id: originalItem ? originalItem.id : undefined
+            ...formData,
+            // Ensure ID is passed if editing
+            id: originalItem ? originalItem.id : undefined
         };
-        
+
         await window.Store.add(this.stockKey, payload);
         this.renderStock();
     }
@@ -490,9 +498,9 @@ class PharmacyModule {
         const tbody = document.getElementById('pharmacy-records-body');
         if (!tbody) return;
         tbody.innerHTML = '';
-        
+
         const isAdmin = window.Auth && window.Auth.currentUser && window.Auth.currentUser.role === 'admin';
-        
+
         // Update header if needed
         const theadRow = document.querySelector('#view-pharmacy-records thead tr');
         if (isAdmin && theadRow && !theadRow.querySelector('.th-action')) {
@@ -515,15 +523,15 @@ class PharmacyModule {
             `;
             tbody.appendChild(tr);
         });
-        
+
         UI.hideLoader(container);
     }
-    
+
     async deleteSale(id) {
         if (!confirm('Are you sure you want to delete this sales record? Stock will not be automatically restored in this version.')) return;
         // Ideally we should restore stock here.
         // For now, simpler implementation as per plan: Delete Record Only.
-        
+
         const success = await window.Store.remove(this.salesKey, id);
         if (success) {
             UI.success('Sale record deleted.');

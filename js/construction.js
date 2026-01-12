@@ -14,7 +14,7 @@ class ConstructionModule {
 
     initListeners() {
         document.addEventListener('click', (e) => {
-            if(e.target.id === 'btn-site-add') this.openAddSiteModal();
+            if (e.target.id === 'btn-site-add') this.openAddSiteModal();
             // Add other button IDs here
         });
     }
@@ -154,6 +154,10 @@ class ConstructionModule {
         const totInc = incomes.reduce((a, c) => a + c.amount, 0);
         const bal = totInc - totExp;
 
+        // Calculate Credit stats
+        const credExp = expenses.filter(e => e.payment_method === 'credit').reduce((a, c) => a + c.amount, 0);
+        const credInc = incomes.filter(i => i.payment_method === 'credit').reduce((a, c) => a + c.amount, 0);
+
         const setTxt = (id, val) => {
             const el = document.getElementById(id);
             if (el) el.textContent = val.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
@@ -162,6 +166,8 @@ class ConstructionModule {
         setTxt('cons-dash-expense', totExp);
         setTxt('cons-dash-income', totInc);
         setTxt('cons-dash-balance', bal);
+        setTxt('cons-dash-credit-expense', credExp);
+        setTxt('cons-dash-credit-income', credInc);
     }
 
     async updateStats() {
@@ -209,7 +215,7 @@ class ConstructionModule {
         const site = fd.get('site') || activeForm.querySelector('select')?.value || 'N/A';
 
         title.textContent = 'Finalize Payment';
-        
+
         // Fetch eligible banks
         const allBanks = await window.Store.get('bank_accounts') || [];
         const sectorBanks = allBanks.filter(b => !b.sectors || b.sectors.includes('construction') || b.sectors === 'all');
@@ -231,6 +237,9 @@ class ConstructionModule {
                         </label>
                         <label style="display:flex; align-items:center; gap:8px; font-weight:normal; cursor:pointer;">
                             <input type="radio" name="payment_method" value="bank" style="width:18px; height:18px;"> Bank Transfer
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px; font-weight:normal; cursor:pointer;">
+                            <input type="radio" name="payment_method" value="credit" style="width:18px; height:18px;"> Credit
                         </label>
                     </div>
                 </div>
@@ -262,12 +271,12 @@ class ConstructionModule {
 
         const pform = document.getElementById('payment-finalize-form');
         const bankSelector = document.getElementById('modal-bank-selector');
-        
+
         pform.querySelectorAll('input[name="payment_method"]').forEach(radio => {
             radio.addEventListener('change', () => {
                 bankSelector.style.display = radio.value === 'bank' ? 'block' : 'none';
                 const bankSelect = pform.querySelector('select[name="bank_account_id"]');
-                if(radio.value === 'bank') bankSelect.setAttribute('required', 'true');
+                if (radio.value === 'bank') bankSelect.setAttribute('required', 'true');
                 else bankSelect.removeAttribute('required');
             });
         });
@@ -293,10 +302,10 @@ class ConstructionModule {
             };
 
             const newTx = await this.saveTransaction(key, data);
-            
+
             modal.classList.add('hidden');
 
-            if(confirm('Transaction Recorded! Print Receipt?')) {
+            if (confirm('Transaction Recorded! Print Receipt?')) {
                 this.printReceipt(newTx);
             }
 
@@ -311,7 +320,7 @@ class ConstructionModule {
     async saveTransaction(key, data) {
         data.date = new Date(data.date).toISOString();
         const newItem = await window.Store.add(key, data);
-        
+
         await window.Store.addActivityLog({
             action_type: 'ADD',
             module_name: 'Construction',
@@ -365,9 +374,9 @@ class ConstructionModule {
         let expenses = (await window.Store.get(this.expKey) || []).map(i => ({ ...i, cat: 'expense' }));
         let incomes = (await window.Store.get(this.incKey) || []).map(i => ({ ...i, cat: 'income' }));
         const all = [...expenses, ...incomes];
-        
+
         const isAdmin = window.Auth && window.Auth.currentUser && window.Auth.currentUser.role === 'admin';
-        
+
         // Header
         const theadRow = document.querySelector('#view-construction-records thead tr');
         if (isAdmin && theadRow && !theadRow.querySelector('.th-action')) {
@@ -409,24 +418,24 @@ class ConstructionModule {
             `;
             tbody.appendChild(tr);
         });
-        
+
         UI.hideLoader(container);
     }
 
     async deleteTransaction(id, cat) {
-         if (!confirm('Are you sure you want to delete this record?')) return;
-         
-         const key = cat === 'expense' ? this.expKey : this.incKey;
-         const success = await window.Store.remove(key, id);
-         
-         if (success) {
-             UI.success('Record deleted.');
-             this.renderRecords();
-             this.updateStats();
-             this.renderDashboard();
-         } else {
-             UI.error('Failed to delete record.');
-         }
+        if (!confirm('Are you sure you want to delete this record?')) return;
+
+        const key = cat === 'expense' ? this.expKey : this.incKey;
+        const success = await window.Store.remove(key, id);
+
+        if (success) {
+            UI.success('Record deleted.');
+            this.renderRecords();
+            this.updateStats();
+            this.renderDashboard();
+        } else {
+            UI.error('Failed to delete record.');
+        }
     }
 }
 

@@ -343,6 +343,10 @@
                             <p id="ph-today-sales">0</p>
                         </div>
                         <div class="card">
+                            <h4>Credit Sales</h4>
+                            <p id="ph-credit-sales">0</p>
+                        </div>
+                        <div class="card">
                             <h4>Low Stock Items</h4>
                             <p id="ph-low-stock">0</p>
                         </div>
@@ -424,6 +428,14 @@
                         <div class="card">
                             <h4>Total Income</h4>
                             <p id="cons-dash-income">0</p>
+                        </div>
+                        <div class="card">
+                            <h4>Outst. Payables</h4>
+                            <p id="cons-dash-credit-expense">0</p>
+                        </div>
+                        <div class="card">
+                            <h4>Outst. Receivables</h4>
+                            <p id="cons-dash-credit-income">0</p>
                         </div>
                     </div>
                 </div>
@@ -538,22 +550,26 @@
                         <div class="card stat-card blue">
                             <div class="stat-label">Total Platform Revenue</div>
                             <div class="stat-value" id="analytics-total-revenue">$0.00</div>
-                            <div class="stat-change" id="analytics-total-revenue-change" style="font-size:0.8rem; margin-top:5px;">Loading...</div>
+                            <div class="stat-change" id="analytics-total-revenue-change"
+                                style="font-size:0.8rem; margin-top:5px;">Loading...</div>
                         </div>
                         <div class="card stat-card blue">
                             <div class="stat-label">Exchange Volume</div>
                             <div class="stat-value" id="analytics-exchange-volume">$0.00</div>
-                            <div class="stat-change" id="analytics-exchange-volume-change" style="font-size:0.8rem; margin-top:5px;">Loading...</div>
+                            <div class="stat-change" id="analytics-exchange-volume-change"
+                                style="font-size:0.8rem; margin-top:5px;">Loading...</div>
                         </div>
                         <div class="card stat-card green">
                             <div class="stat-label">Pharmacy Sales</div>
                             <div class="stat-value" id="analytics-pharmacy-sales">$0.00</div>
-                            <div class="stat-change" id="analytics-pharmacy-sales-change" style="font-size:0.8rem; margin-top:5px;">Loading...</div>
+                            <div class="stat-change" id="analytics-pharmacy-sales-change"
+                                style="font-size:0.8rem; margin-top:5px;">Loading...</div>
                         </div>
                         <div class="card stat-card orange">
                             <div class="stat-label">Construction Balance</div>
                             <div class="stat-value" id="analytics-construction-profit">$0.00</div>
-                            <div class="stat-change" id="analytics-construction-profit-change" style="font-size:0.8rem; margin-top:5px;">Loading...</div>
+                            <div class="stat-change" id="analytics-construction-profit-change"
+                                style="font-size:0.8rem; margin-top:5px;">Loading...</div>
                         </div>
                     </div>
 
@@ -608,16 +624,19 @@
                         <!-- Create/Edit Form -->
                         <div class="card">
                             <h3>User Profile</h3>
-                            <p style="color:var(--text-muted); margin-bottom:1.5rem;">Configure system access and roles.</p>
+                            <p style="color:var(--text-muted); margin-bottom:1.5rem;">Configure system access and roles.
+                            </p>
                             <form id="user-form">
                                 <input type="hidden" id="edit-mode" value="">
                                 <div class="form-group">
                                     <label>Username</label>
-                                    <input name="username" id="u-username" class="form-control" required placeholder="User unique ID" />
+                                    <input name="username" id="u-username" class="form-control" required
+                                        placeholder="User unique ID" />
                                 </div>
                                 <div class="form-group" id="pass-group">
                                     <label>Password</label>
-                                    <input name="password" id="u-password" type="password" class="form-control" required placeholder="••••••••" />
+                                    <input name="password" id="u-password" type="password" class="form-control" required
+                                        placeholder="••••••••" />
                                 </div>
                                 <div class="form-group">
                                     <label>Full Name</label>
@@ -633,17 +652,22 @@
                                     </select>
                                 </div>
                                 <div style="display:flex; gap:10px; margin-top:20px;">
-                                    <button class="btn-primary full-width" type="submit" id="submit-btn-user">Create User</button>
-                                    <button class="btn-secondary" type="button" id="cancel-btn-user" style="display:none;">Cancel</button>
+                                    <button class="btn-primary full-width" type="submit" id="submit-btn-user">Create
+                                        User</button>
+                                    <button class="btn-secondary" type="button" id="cancel-btn-user"
+                                        style="display:none;">Cancel</button>
                                 </div>
                             </form>
                         </div>
 
                         <!-- Users List -->
                         <div class="card">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                            <div
+                                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
                                 <h3 style="margin:0">Active Users</h3>
-                                <div id="no-access-users" style="display:none; color:var(--danger); font-size:0.9rem; font-weight:600;">⚠️ Admin Only</div>
+                                <div id="no-access-users"
+                                    style="display:none; color:var(--danger); font-size:0.9rem; font-weight:600;">⚠️
+                                    Admin Only</div>
                             </div>
                             <div class="table-container">
                                 <table class="data-table">
@@ -667,50 +691,66 @@
                         <!-- Bank Form -->
                         <div class="card">
                             <h3>Bank Details</h3>
-                            <p style="color:var(--text-muted); margin-bottom:1.5rem;">Configure company accounts for transactions.</p>
+                            <p style="color:var(--text-muted); margin-bottom:1.5rem;">Configure company accounts for
+                                transactions.</p>
                             <form id="bank-form">
                                 <input type="hidden" name="id" id="bank-id">
                                 <div class="form-group">
                                     <label>Bank Name</label>
-                                    <input name="bank_name" class="form-control" required placeholder="e.g. Chase Bank" />
+                                    <input name="bank_name" class="form-control" required
+                                        placeholder="e.g. Chase Bank" />
                                 </div>
                                 <div class="form-group">
                                     <label>Account Number</label>
-                                    <input name="account_number" class="form-control" required placeholder="Account Number" />
+                                    <input name="account_number" class="form-control" required
+                                        placeholder="Account Number" />
                                 </div>
                                 <div class="form-group">
                                     <label>Account Holder</label>
-                                    <input name="account_holder" class="form-control" required placeholder="Organization Name" />
+                                    <input name="account_holder" class="form-control" required
+                                        placeholder="Organization Name" />
                                 </div>
                                 <div class="form-group">
                                     <label>Target Sectors</label>
-                                    <div style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+                                    <div
+                                        style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
                                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                                            <label style="display:flex; align-items:center; gap:8px; font-weight:normal;">
-                                                <input type="checkbox" name="sector" value="exchange" style="width:16px;"> Exchange
+                                            <label
+                                                style="display:flex; align-items:center; gap:8px; font-weight:normal;">
+                                                <input type="checkbox" name="sector" value="exchange"
+                                                    style="width:16px;"> Exchange
                                             </label>
-                                            <label style="display:flex; align-items:center; gap:8px; font-weight:normal;">
-                                                <input type="checkbox" name="sector" value="pharmacy" style="width:16px;"> Pharmacy
+                                            <label
+                                                style="display:flex; align-items:center; gap:8px; font-weight:normal;">
+                                                <input type="checkbox" name="sector" value="pharmacy"
+                                                    style="width:16px;"> Pharmacy
                                             </label>
-                                            <label style="display:flex; align-items:center; gap:8px; font-weight:normal;">
-                                                <input type="checkbox" name="sector" value="construction" style="width:16px;"> Construction
+                                            <label
+                                                style="display:flex; align-items:center; gap:8px; font-weight:normal;">
+                                                <input type="checkbox" name="sector" value="construction"
+                                                    style="width:16px;"> Construction
                                             </label>
                                         </div>
                                     </div>
-                                    <small style="color:var(--text-muted); display:block; margin-top:5px;">Check specific sectors or leave empty for all.</small>
+                                    <small style="color:var(--text-muted); display:block; margin-top:5px;">Check
+                                        specific sectors or leave empty for all.</small>
                                 </div>
                                 <div style="display:flex; gap:10px; margin-top:20px;">
-                                    <button class="btn-primary full-width" type="submit" id="submit-btn-bank">Save Account</button>
-                                    <button class="btn-secondary" type="button" id="cancel-btn-bank" style="display:none;">Cancel</button>
+                                    <button class="btn-primary full-width" type="submit" id="submit-btn-bank">Save
+                                        Account</button>
+                                    <button class="btn-secondary" type="button" id="cancel-btn-bank"
+                                        style="display:none;">Cancel</button>
                                 </div>
                             </form>
                         </div>
 
                         <!-- Banks List -->
                         <div class="card">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                            <div
+                                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
                                 <h3 style="margin:0">Active Accounts</h3>
-                                <div id="no-access-banks" style="display:none; color:var(--danger); font-weight:600;">⚠️ Admin Only</div>
+                                <div id="no-access-banks" style="display:none; color:var(--danger); font-weight:600;">⚠️
+                                    Admin Only</div>
                             </div>
                             <div class="table-container">
                                 <table class="data-table">
@@ -732,7 +772,8 @@
                 <!-- 3. System Logs -->
                 <div id="view-admin-logs" class="view-section hidden">
                     <div class="card">
-                        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                        <div class="card-header"
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
                             <h3 style="margin:0">System Activity Logs</h3>
                             <div>
                                 <button id="refreshLogs" class="btn-primary">Refresh Logs</button>
@@ -784,7 +825,7 @@
             </ul>
         </div>
     </div>
-    
+
     <script src="js/store.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/ui.js"></script>

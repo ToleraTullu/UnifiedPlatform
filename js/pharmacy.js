@@ -495,6 +495,7 @@ class PharmacyModule {
         UI.showLoader(container);
 
         const sales = await window.Store.get(this.salesKey) || [];
+        const bankAccounts = await window.Store.get('bank_accounts') || [];
         const tbody = document.getElementById('pharmacy-records-body');
         if (!tbody) return;
         tbody.innerHTML = '';
@@ -503,25 +504,92 @@ class PharmacyModule {
 
         // Update header if needed
         const theadRow = document.querySelector('#view-pharmacy-records thead tr');
-        if (isAdmin && theadRow && !theadRow.querySelector('.th-action')) {
-            const th = document.createElement('th');
-            th.className = 'th-action';
-            th.innerHTML = 'Actions';
-            theadRow.appendChild(th);
+        if (theadRow) {
+             if (!theadRow.querySelector('.th-details')) {
+                const th = document.createElement('th');
+                th.className = 'th-details';
+                th.style.width = '40px';
+                th.textContent = '';
+                theadRow.insertBefore(th, theadRow.firstChild);
+            }
+            if (isAdmin && !theadRow.querySelector('.th-action')) {
+                const th = document.createElement('th');
+                th.className = 'th-action';
+                th.innerHTML = 'Actions';
+                theadRow.appendChild(th);
+            }
         }
 
         sales.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         sales.forEach(s => {
             const itemNames = (s.items || []).map(i => `${i.name} (x${i.qty})`).join(', ');
+            
+            // Main Row
             const tr = document.createElement('tr');
             tr.innerHTML = `
+                <td>
+                    <button class="btn-primary btn-sm btn-toggle-details" style="border-radius:50%; width:24px; height:24px; padding:0; display:flex; align-items:center; justify-content:center; font-weight:bold;">+</button>
+                </td>
                 <td>${new Date(s.date).toLocaleString()}</td>
                 <td>${itemNames}</td>
                 <td>$${parseFloat(s.total).toFixed(2)}</td>
                 ${isAdmin ? `<td><button class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="window.PharmacyModule.deleteSale(${s.id})">Delete</button></td>` : ''}
             `;
             tbody.appendChild(tr);
+
+            // Detail Row
+            const trDetail = document.createElement('tr');
+            trDetail.style.display = 'none';
+            trDetail.style.backgroundColor = 'var(--bg-body)';
+
+            // Build Item List for Detail View
+            const itemListHtml = (s.items || []).map(i => `
+                <div style="display:flex; justify-content:space-between; border-bottom:1px dashed #eee; padding:4px 0;">
+                    <span>${i.name}</span>
+                    <span>${i.qty || 0} ${i.unit || 'Items'} x $${(i.price || 0).toFixed(2)} = $${((i.qty || 0) * (i.price || 0)).toFixed(2)}</span>
+                </div>
+            `).join('');
+
+            // Payment Details
+            let paymentInfo = `<span style="text-transform:capitalize">${s.payment_method || 'Unknown'}</span>`;
+            if (s.payment_method === 'bank') {
+                const bank = bankAccounts.find(b => b.id == s.bank_account_id);
+                paymentInfo += ` <span style="color:var(--text-muted)">via</span> ${bank ? `${bank.bank_name} (${bank.account_number})` : 'Unknown Bank'}`;
+                if (s.bank_name && !bank) paymentInfo += ` (${s.bank_name})`; // Fallback to stored name
+            }
+
+            trDetail.innerHTML = `
+                <td colspan="${isAdmin ? 5 : 4}" style="padding:15px 20px;">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                        <div>
+                            <h5 style="margin-bottom:10px; color:var(--primary)">Items Puchased</h5>
+                            <div style="font-size:0.9rem;">
+                                ${itemListHtml}
+                            </div>
+                        </div>
+                        <div>
+                            <h5 style="margin-bottom:10px; color:var(--primary)">Transaction Details</h5>
+                            <div style="font-size:0.9rem;">
+                                <div style="margin-bottom:5px;"><strong>Date:</strong> ${new Date(s.date).toLocaleString()}</div>
+                                <div style="margin-bottom:5px;"><strong>Total:</strong> $${(s.total || 0).toFixed(2)}</div>
+                                <div><strong>Payment:</strong> ${paymentInfo}</div>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(trDetail);
+
+            // Toggle Logic
+            const btn = tr.querySelector('.btn-toggle-details');
+            btn.addEventListener('click', () => {
+                const isHidden = trDetail.style.display === 'none';
+                trDetail.style.display = isHidden ? 'table-row' : 'none';
+                btn.textContent = isHidden ? '-' : '+';
+                btn.classList.toggle('btn-primary', !isHidden);
+                btn.classList.toggle('btn-secondary', isHidden);
+            });
         });
 
         UI.hideLoader(container);

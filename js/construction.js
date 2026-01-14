@@ -374,16 +374,26 @@ class ConstructionModule {
         let expenses = (await window.Store.get(this.expKey) || []).map(i => ({ ...i, cat: 'expense' }));
         let incomes = (await window.Store.get(this.incKey) || []).map(i => ({ ...i, cat: 'income' }));
         const all = [...expenses, ...incomes];
+        const bankAccounts = await window.Store.get('bank_accounts') || [];
 
         const isAdmin = window.Auth && window.Auth.currentUser && window.Auth.currentUser.role === 'admin';
 
-        // Header
+        // Header Update
         const theadRow = document.querySelector('#view-construction-records thead tr');
-        if (isAdmin && theadRow && !theadRow.querySelector('.th-action')) {
-            const th = document.createElement('th');
-            th.className = 'th-action';
-            th.textContent = 'Actions';
-            theadRow.appendChild(th);
+        if (theadRow) {
+             if (!theadRow.querySelector('.th-details')) {
+                const th = document.createElement('th');
+                th.className = 'th-details';
+                th.style.width = '40px';
+                th.textContent = '';
+                theadRow.insertBefore(th, theadRow.firstChild);
+            }
+            if (isAdmin && !theadRow.querySelector('.th-action')) {
+                const th = document.createElement('th');
+                th.className = 'th-action';
+                th.textContent = 'Actions';
+                theadRow.appendChild(th);
+            }
         }
 
         all.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -394,7 +404,7 @@ class ConstructionModule {
         tbody.innerHTML = '';
 
         if (all.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No records found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No records found.</td></tr>';
             UI.hideLoader(container);
             return;
         }
@@ -402,21 +412,69 @@ class ConstructionModule {
         all.forEach(tx => {
             const color = tx.cat === 'income' ? 'var(--success)' : 'var(--danger)';
             const tr = document.createElement('tr');
+            
+            // Payment Info Logic
+            let paymentInfo = `<span style="text-transform:capitalize">${tx.payment_method || 'Cash'}</span>`;
+            if (tx.payment_method === 'bank') {
+                const bank = bankAccounts.find(b => b.id == tx.bank_account_id);
+                paymentInfo += ` <span style="color:var(--text-muted)">via</span> ${bank ? `${bank.bank_name} (${bank.account_number})` : 'Unknown Bank'}`;
+            }
+            if (tx.external_bank_name) {
+                paymentInfo += `<br><small>Beneficiary: ${tx.external_bank_name} - ${tx.external_account_number || ''}</small>`;
+            }
+
+            // Main Row
             tr.innerHTML = `
+                <td>
+                    <button class="btn-primary btn-sm btn-toggle-details" style="border-radius:50%; width:24px; height:24px; padding:0; display:flex; align-items:center; justify-content:center; font-weight:bold;">+</button>
+                </td>
                 <td>${new Date(tx.date).toLocaleDateString()}</td>
                 <td><span style="color:${color};font-weight:bold">${tx.cat.toUpperCase()}</span></td>
                 <td>
                     <span style="font-size:0.85rem; background:var(--bg-body); padding:2px 6px; border-radius:4px; margin-right:5px">
                         ${tx.site || 'General'}
                     </span>
-                    ${tx.description}
+                    ${tx.description.length > 30 ? tx.description.substring(0, 30) + '...' : tx.description}
                 </td>
                 <td style="color:${color}; font-weight:600">
-                    ${tx.cat === 'income' ? '+' : '-'}${tx.amount.toFixed(2)}
+                    ${tx.cat === 'income' ? '+' : '-'}${(tx.amount || 0).toFixed(2)}
                 </td>
                 ${isAdmin ? `<td><button class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="window.ConstructionModule.deleteTransaction(${tx.id}, '${tx.cat}')">Delete</button></td>` : ''}
             `;
             tbody.appendChild(tr);
+
+            // Detail Row
+            const trDetail = document.createElement('tr');
+            trDetail.style.display = 'none';
+            trDetail.style.backgroundColor = 'var(--bg-body)';
+
+            trDetail.innerHTML = `
+                <td colspan="${isAdmin ? 6 : 5}" style="padding:15px 20px;">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                        <div>
+                            <h5 style="margin-bottom:10px; color:var(--primary)">Project Details</h5>
+                            <div style="margin-bottom:5px;"><strong>Site Name:</strong> ${tx.site || 'General'}</div>
+                            <div style="margin-bottom:5px;"><strong>Description:</strong> ${tx.description}</div>
+                        </div>
+                        <div>
+                            <h5 style="margin-bottom:10px; color:var(--primary)">Payment Information</h5>
+                             <div style="margin-bottom:5px;"><strong>Date:</strong> ${new Date(tx.date).toLocaleString()}</div>
+                            <div><strong>Method:</strong> ${paymentInfo}</div>
+                        </div>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(trDetail);
+
+            // Toggle Logic
+            const btn = tr.querySelector('.btn-toggle-details');
+            btn.addEventListener('click', () => {
+                const isHidden = trDetail.style.display === 'none';
+                trDetail.style.display = isHidden ? 'table-row' : 'none';
+                btn.textContent = isHidden ? '-' : '+';
+                btn.classList.toggle('btn-primary', !isHidden);
+                btn.classList.toggle('btn-secondary', isHidden);
+            });
         });
 
         UI.hideLoader(container);

@@ -644,26 +644,45 @@ class ExchangeModule {
         UI.showLoader(container);
 
         const transactions = await window.Store.get(this.txKey) || [];
+        const bankAccounts = await window.Store.get('bank_accounts') || [];
         const tbody = document.getElementById('exchange-records-body');
         tbody.innerHTML = '';
         
         const isAdmin = window.Auth && window.Auth.currentUser && window.Auth.currentUser.role === 'admin';
         
-        // Update header if needed (once)
+        // Update header: Ensure 'Details' column is first
         const theadRow = document.querySelector('#view-exchange-records thead tr');
-        if (isAdmin && theadRow && !theadRow.querySelector('.th-action')) {
-            const th = document.createElement('th');
-            th.className = 'th-action';
-            th.textContent = 'Actions';
-            theadRow.appendChild(th);
+        if (theadRow) {
+            // Check if we already have the details header
+            if (!theadRow.querySelector('.th-details')) {
+                const th = document.createElement('th');
+                th.className = 'th-details';
+                th.style.width = '40px';
+                th.textContent = '';
+                theadRow.insertBefore(th, theadRow.firstChild);
+            }
+            
+            // Layout fix: Expand Actions check (existing logic preserved)
+            if (isAdmin && !theadRow.querySelector('.th-action')) {
+                const th = document.createElement('th');
+                th.className = 'th-action';
+                th.textContent = 'Actions';
+                theadRow.appendChild(th);
+            }
         }
 
         // Sort by date desc
         transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         transactions.forEach(tx => {
+            // MAIN ROW
             const tr = document.createElement('tr');
+            
+            // Initial render of Main Row
             tr.innerHTML = `
+                <td>
+                    <button class="btn-primary btn-sm btn-toggle-details" style="border-radius:50%; width:24px; height:24px; padding:0; display:flex; align-items:center; justify-content:center; font-weight:bold;">+</button>
+                </td>
                 <td>${new Date(tx.date).toLocaleString()}</td>
                 <td><span style="font-weight:bold; color:${tx.type === 'buy' ? 'green' : 'red'}">${tx.type.toUpperCase()}</span></td>
                 <td>${tx.customer}</td>
@@ -674,6 +693,43 @@ class ExchangeModule {
                 ${isAdmin ? `<td><button class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="window.ExchangeModule.deleteTransaction(${tx.id})">Delete</button></td>` : ''}
             `;
             tbody.appendChild(tr);
+
+            // DETAIL ROW (Hidden by default)
+            const trDetail = document.createElement('tr');
+            trDetail.style.display = 'none';
+            trDetail.style.backgroundColor = 'var(--bg-body)'; // Slightly different bg
+            
+            // Payment Details Logic
+            let paymentInfo = `<span style="text-transform:capitalize">${tx.payment_method}</span>`;
+            if (tx.payment_method === 'bank') {
+                const bank = bankAccounts.find(b => b.id == tx.bank_account_id);
+                paymentInfo += ` <span style="color:var(--text-muted)">via</span> ${bank ? `${bank.bank_name} (${bank.account_number})` : 'Unknown Bank'}`;
+            }
+            if (tx.external_bank_name) {
+                paymentInfo += `<br><small>Beneficiary: ${tx.external_bank_name} - ${tx.external_account_number || ''}</small>`;
+            }
+
+            trDetail.innerHTML = `
+                <td colspan="${isAdmin ? 9 : 8}" style="padding:15px 20px;">
+                    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:20px;">
+                        <div><strong>Full Name:</strong> ${tx.customer}</div>
+                        <div><strong>ID Number:</strong> ${tx.cid || 'N/A'}</div>
+                        <div><strong>Payment Method:</strong> ${paymentInfo}</div>
+                        ${tx.description ? `<div><strong>Notes:</strong> ${tx.description}</div>` : ''}
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(trDetail);
+
+            // Toggle Logic
+            const btn = tr.querySelector('.btn-toggle-details');
+            btn.addEventListener('click', () => {
+                const isHidden = trDetail.style.display === 'none';
+                trDetail.style.display = isHidden ? 'table-row' : 'none';
+                btn.textContent = isHidden ? '-' : '+';
+                btn.classList.toggle('btn-primary', !isHidden); // Optional style toggle
+                btn.classList.toggle('btn-secondary', isHidden);
+            });
         });
         
         UI.hideLoader(container);

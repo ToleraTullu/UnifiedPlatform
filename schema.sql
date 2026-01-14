@@ -1,5 +1,5 @@
 -- Database Schema for Unified Platform
--- Run these commands in your MySQL Database
+-- Run these commands in your MySQL Database (phpMyAdmin)
 
 -- 1. Users Table
 CREATE TABLE IF NOT EXISTS users (
@@ -11,7 +11,17 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Exchange Rates Table
+-- 2. Bank Accounts Table (Moved up for Foreign Key references)
+CREATE TABLE IF NOT EXISTS bank_accounts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    bank_name VARCHAR(100) NOT NULL,
+    account_number VARCHAR(50) NOT NULL,
+    account_holder VARCHAR(100) NOT NULL,
+    sectors VARCHAR(255) DEFAULT 'all', -- Comma-separated: 'exchange,pharmacy,construction' or 'all'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. Exchange Rates Table
 CREATE TABLE IF NOT EXISTS exchange_rates (
     id INT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(3) NOT NULL UNIQUE,
@@ -20,7 +30,7 @@ CREATE TABLE IF NOT EXISTS exchange_rates (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- 3. Exchange Transactions Table
+-- 4. Exchange Transactions Table
 CREATE TABLE IF NOT EXISTS exchange_transactions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     date DATETIME NOT NULL,
@@ -31,10 +41,15 @@ CREATE TABLE IF NOT EXISTS exchange_transactions (
     amount DECIMAL(15, 2) NOT NULL,
     rate DECIMAL(10, 4) NOT NULL,
     total_local DECIMAL(15, 2) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    payment_method ENUM('cash', 'bank') DEFAULT 'cash',
+    bank_account_id INT NULL,
+    external_bank_name VARCHAR(100) NULL,
+    external_account_number VARCHAR(50) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id)
 );
 
--- 4. Pharmacy Items Table
+-- 5. Pharmacy Items Table
 CREATE TABLE IF NOT EXISTS pharmacy_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -49,15 +64,20 @@ CREATE TABLE IF NOT EXISTS pharmacy_items (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- 5. Pharmacy Sales Table
+-- 6. Pharmacy Sales Table
 CREATE TABLE IF NOT EXISTS pharmacy_sales (
     id INT AUTO_INCREMENT PRIMARY KEY,
     date DATETIME NOT NULL,
     total_amount DECIMAL(10, 2) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    payment_method ENUM('cash', 'bank') DEFAULT 'cash',
+    bank_account_id INT NULL,
+    doctor_name VARCHAR(100) NULL,
+    patient_name VARCHAR(100) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id)
 );
 
--- 6. Pharmacy Sale Items (Relational)
+-- 7. Pharmacy Sale Items (Relational)
 CREATE TABLE IF NOT EXISTS pharmacy_sale_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     sale_id INT NOT NULL,
@@ -71,7 +91,7 @@ CREATE TABLE IF NOT EXISTS pharmacy_sale_items (
     FOREIGN KEY (item_id) REFERENCES pharmacy_items(id)
 );
 
--- 7. Construction Sites Table
+-- 8. Construction Sites Table
 CREATE TABLE IF NOT EXISTS construction_sites (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -80,27 +100,34 @@ CREATE TABLE IF NOT EXISTS construction_sites (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 8. Construction Transactions (Income & Expense)
--- Can be one table or two. Let's use two for clarity as per current JS structure.
-
+-- 9. Construction Transactions (Expenses)
 CREATE TABLE IF NOT EXISTS construction_expenses (
     id INT AUTO_INCREMENT PRIMARY KEY,
     site_id INT NOT NULL,
     description VARCHAR(255) NOT NULL,
     amount DECIMAL(15, 2) NOT NULL,
     date DATE NOT NULL,
+    payment_method ENUM('cash', 'bank') DEFAULT 'cash',
+    bank_account_id INT NULL,
+    external_bank_name VARCHAR(100) NULL,
+    external_account_number VARCHAR(50) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (site_id) REFERENCES construction_sites(id)
+    FOREIGN KEY (site_id) REFERENCES construction_sites(id),
+    FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id)
 );
 
+-- 10. Construction Transactions (Income)
 CREATE TABLE IF NOT EXISTS construction_income (
     id INT AUTO_INCREMENT PRIMARY KEY,
     site_id INT NOT NULL,
     description VARCHAR(255) NOT NULL,
     amount DECIMAL(15, 2) NOT NULL,
     date DATE NOT NULL,
+    payment_method ENUM('cash', 'bank') DEFAULT 'cash',
+    bank_account_id INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (site_id) REFERENCES construction_sites(id)
+    FOREIGN KEY (site_id) REFERENCES construction_sites(id),
+    FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id)
 );
 
 -- Initial Data Import (Optional)
@@ -114,41 +141,3 @@ INSERT INTO exchange_rates (code, buy_rate, sell_rate) VALUES
 ('USD', 1.0000, 1.0200),
 ('EUR', 0.9000, 0.9200),
 ('GBP', 0.8000, 0.8200);
-
--- 9. Bank Accounts Table
-CREATE TABLE IF NOT EXISTS bank_accounts (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    bank_name VARCHAR(100) NOT NULL,
-    account_number VARCHAR(50) NOT NULL,
-    account_holder VARCHAR(100) NOT NULL,
-    sectors VARCHAR(255) DEFAULT 'all', -- Comma-separated: 'exchange,pharmacy,construction' or 'all'
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 10. Schema Updates for Payment Methods (Run these ALTERS if tables exist, or include in CREATE definitions above)
--- Since we are defining the full schema, we will add the columns to the CREATE statements directly for clarity in a fresh install,
--- BUT for an existing DB, we need ALTER statements. I will provide ALTER statements here for safety on existing DBs.
-
--- Exchange Transactions
--- ALTER TABLE exchange_transactions ADD COLUMN payment_method ENUM('cash', 'bank') DEFAULT 'cash';
--- ALTER TABLE exchange_transactions ADD COLUMN bank_account_id INT NULL;
--- ALTER TABLE exchange_transactions ADD COLUMN external_bank_name VARCHAR(100) NULL;
--- ALTER TABLE exchange_transactions ADD COLUMN external_account_number VARCHAR(50) NULL;
--- ALTER TABLE exchange_transactions ADD FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id);
-
--- Pharmacy Sales
--- ALTER TABLE pharmacy_sales ADD COLUMN payment_method ENUM('cash', 'bank') DEFAULT 'cash';
--- ALTER TABLE pharmacy_sales ADD COLUMN bank_account_id INT NULL;
--- ALTER TABLE pharmacy_sales ADD FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id);
-
--- Construction Income
--- ALTER TABLE construction_income ADD COLUMN payment_method ENUM('cash', 'bank') DEFAULT 'cash';
--- ALTER TABLE construction_income ADD COLUMN bank_account_id INT NULL;
--- ALTER TABLE construction_income ADD FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id);
-
--- Construction Expenses
--- ALTER TABLE construction_expenses ADD COLUMN payment_method ENUM('cash', 'bank') DEFAULT 'cash';
--- ALTER TABLE construction_expenses ADD COLUMN bank_account_id INT NULL;
--- ALTER TABLE construction_expenses ADD COLUMN external_bank_name VARCHAR(100) NULL;
--- ALTER TABLE construction_expenses ADD COLUMN external_account_number VARCHAR(50) NULL;
--- ALTER TABLE construction_expenses ADD FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id);

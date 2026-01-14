@@ -387,9 +387,12 @@ class ExchangeModule {
         });
     }
 
-    initRecords() {
+    async initRecords() {
         const transactions = window.Store.get(this.storeKey) || [];
+        const bankAccounts = window.Store.get('bank_accounts') || [];
         const tbody = document.querySelector('tbody');
+        if (!tbody) return;
+
         tbody.innerHTML = '';
 
         // Check if user is admin
@@ -399,22 +402,73 @@ class ExchangeModule {
         if (adminControls) adminControls.style.display = isAdmin ? 'block' : 'none';
         if (actionsHeader) actionsHeader.style.display = isAdmin ? 'table-cell' : 'none';
 
+        // Update header: Ensure 'Details' column is first
+        const theadRow = document.querySelector('thead tr');
+        if (theadRow && !theadRow.querySelector('.th-details')) {
+             const th = document.createElement('th');
+             th.className = 'th-details';
+             th.style.width = '40px';
+             th.textContent = '';
+             theadRow.insertBefore(th, theadRow.firstChild);
+        }
+
         transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         transactions.forEach((tx, index) => {
+            // MAIN ROW
             const tr = document.createElement('tr');
             tr.innerHTML = `
+                <td>
+                     <button class="btn-primary btn-sm btn-toggle-details" style="border-radius:50%; width:24px; height:24px; padding:0; display:flex; align-items:center; justify-content:center; font-weight:bold;">+</button>
+                </td>
                 <td>${new Date(tx.date).toLocaleString()}</td>
                 <td><span style="font-weight:bold; color:${tx.type === 'buy' ? 'green' : 'red'}">${tx.type.toUpperCase()}</span></td>
                 <td>${tx.customer}</td>
-                <td>${tx.id_card || ''}</td>
-                <td>${tx.currency}</td>
-                <td>${tx.amount.toFixed(2)}</td>
-                <td>${tx.rate.toFixed(4)}</td>
-                <td>${(tx.amount * tx.rate).toFixed(2)}</td>
+                <td>${tx.id_card || tx.cid || 'N/A'}</td>
+                <td>${tx.currency || tx.currency_code}</td>
+                <td>${parseFloat(tx.amount).toFixed(2)}</td>
+                <td>${parseFloat(tx.rate).toFixed(4)}</td>
+                <td>${(parseFloat(tx.amount) * parseFloat(tx.rate)).toFixed(2)}</td>
                 ${isAdmin ? `<td><button class="btn-danger" onclick="window.ExchangeModule.deleteTransaction(${index})">Delete</button></td>` : ''}
             `;
             tbody.appendChild(tr);
+
+            // DETAIL ROW (Hidden by default)
+            const trDetail = document.createElement('tr');
+            trDetail.style.display = 'none';
+            trDetail.style.backgroundColor = '#f8f9fa'; 
+            
+            // Payment Details Logic
+            let paymentInfo = `<span style="text-transform:capitalize">${tx.payment_method || 'Cash'}</span>`;
+            if (tx.payment_method === 'bank') {
+                const bank = bankAccounts.find(b => b.id == tx.bank_account_id);
+                paymentInfo += ` <span style="color:#6c757d">via</span> ${bank ? `${bank.bank_name} (${bank.account_number})` : 'Unknown Bank'}`;
+            }
+            if (tx.external_bank_name) {
+                paymentInfo += `<br><small>Beneficiary: ${tx.external_bank_name} - ${tx.external_account_number || ''}</small>`;
+            }
+
+            trDetail.innerHTML = `
+                <td colspan="${isAdmin ? 10 : 9}" style="padding:15px 20px;">
+                    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:20px;">
+                        <div><strong>Full Name:</strong> ${tx.customer}</div>
+                        <div><strong>ID Number:</strong> ${tx.id_card || tx.cid || 'N/A'}</div>
+                        <div><strong>Payment Method:</strong> ${paymentInfo}</div>
+                        ${tx.description ? `<div><strong>Notes:</strong> ${tx.description}</div>` : ''}
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(trDetail);
+
+            // Toggle Logic
+            const btn = tr.querySelector('.btn-toggle-details');
+            btn.addEventListener('click', () => {
+                const isHidden = trDetail.style.display === 'none';
+                trDetail.style.display = isHidden ? 'table-row' : 'none';
+                btn.textContent = isHidden ? '-' : '+';
+                btn.classList.toggle('btn-primary', !isHidden);
+                btn.classList.toggle('btn-secondary', isHidden);
+            });
         });
     }
     initStock() {

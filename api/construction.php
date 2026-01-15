@@ -2,31 +2,74 @@
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
-require_once 'data_store.php';
+require_once 'db_connect.php';
 
 $action = $_GET['action'] ?? '';
-$store = new DataStore();
 
 if ($action === 'sites') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $item = json_decode(file_get_contents("php://input"), true);
-        echo json_encode($store->add('construction_sites', $item));
+        $data = json_decode(file_get_contents("php://input"), true);
+        $stmt = $pdo->prepare("INSERT INTO construction_sites (name, location, status) VALUES (?, ?, ?)");
+        try {
+            $stmt->execute([
+                $data['name'],
+                $data['location'] ?? '',
+                $data['status'] ?? 'active'
+            ]);
+            $data['id'] = $pdo->lastInsertId();
+            echo json_encode($data);
+        } catch (PDOException $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
     } else {
-        echo json_encode($store->get('construction_sites'));
+        $stmt = $pdo->query("SELECT * FROM construction_sites");
+        echo json_encode($stmt->fetchAll());
     }
 } elseif ($action === 'expenses') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $item = json_decode(file_get_contents("php://input"), true);
-        echo json_encode($store->add('construction_expenses', $item));
+        $data = json_decode(file_get_contents("php://input"), true);
+        $stmt = $pdo->prepare("INSERT INTO construction_expenses (site_id, description, amount, date, payment_method, bank_account_id, external_bank_name, external_account_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        try {
+            $stmt->execute([
+                $data['site_id'],
+                $data['description'],
+                $data['amount'],
+                $data['date'],
+                $data['payment_method'] ?? 'cash',
+                $data['bank_account_id'] ?? null,
+                $data['external_bank_name'] ?? null,
+                $data['external_account_number'] ?? null
+            ]);
+            $data['id'] = $pdo->lastInsertId();
+            echo json_encode($data);
+        } catch (PDOException $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
     } else {
-        echo json_encode($store->get('construction_expenses'));
+        $stmt = $pdo->query("SELECT * FROM construction_expenses ORDER BY date DESC");
+        echo json_encode($stmt->fetchAll());
     }
 } elseif ($action === 'income') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $item = json_decode(file_get_contents("php://input"), true);
-        echo json_encode($store->add('construction_income', $item));
+        $data = json_decode(file_get_contents("php://input"), true);
+        $stmt = $pdo->prepare("INSERT INTO construction_income (site_id, description, amount, date, payment_method, bank_account_id) VALUES (?, ?, ?, ?, ?, ?)");
+        try {
+            $stmt->execute([
+                $data['site_id'],
+                $data['description'],
+                $data['amount'],
+                $data['date'],
+                $data['payment_method'] ?? 'cash',
+                $data['bank_account_id'] ?? null
+            ]);
+            $data['id'] = $pdo->lastInsertId();
+            echo json_encode($data);
+        } catch (PDOException $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
     } else {
-        echo json_encode($store->get('construction_income'));
+        $stmt = $pdo->query("SELECT * FROM construction_income ORDER BY date DESC");
+        echo json_encode($stmt->fetchAll());
     }
 } else {
     echo json_encode([]);

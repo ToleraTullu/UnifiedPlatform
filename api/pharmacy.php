@@ -2,76 +2,117 @@
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
-require_once 'data_store.php';
+require_once 'db_connect.php';
 
 $action = $_GET['action'] ?? '';
-$store = new DataStore();
 
 if ($action === 'stock') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $item = json_decode(file_get_contents("php://input"), true);
-        // If ID exists on stock item, we might be updating?
-        // Basic Store.add() just appends. For STOCK we might need update.
-        // For simplicity, we just add or overwrite entire list?
-        // App sends single item usually.
-        // Let's rely on basic Add for now, or handle 'update' logic if ID matches?
-        // Our DataStore 'add' appends.
-        // Real logic: Find and replace if ID matches.
 
-        // Custom logic for stock update:
-        $stock = $store->get('pharmacy_items');
-        $found = false;
-        if (isset($item['id'])) {
-            foreach ($stock as &$current) {
-                if ($current['id'] == $item['id']) {
-                    $current = array_merge($current, $item);
-                    $found = true;
-                    break;
-                }
+        try {
+            // Upsert Logic
+            // If ID is present and > 0, we try to update. Otherwise INSERT.
+            // The schema says ID is AUTO_INCREMENT.
+
+            if (!empty($item['id'])) {
+                // Update
+                $stmt = $pdo->prepare("UPDATE pharmacy_items SET name=?, buy_price=?, sell_price=?, qty=?, unit_type=?, items_per_unit=?, batch_number=?, mfg_date=?, exp_date=? WHERE id=?");
+                $stmt->execute([
+                    $item['name'],
+                    $item['buy_price'],
+                    $item['sell_price'],
+                    $item['qty'],
+                    $item['unit_type'] ?? 'Item',
+                    $item['items_per_unit'] ?? 1,
+                    $item['batch_number'] ?? null,
+                    $item['mfg_date'] ?? null,
+                    $item['exp_date'] ?? null,
+                    $item['id']
+                ]);
+            } else {
+                // Insert
+                $stmt = $pdo->prepare("INSERT INTO pharmacy_items (name, buy_price, sell_price, qty, unit_type, items_per_unit, batch_number, mfg_date, exp_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([
+                    $item['name'],
+                    $item['buy_price'],
+                    $item['sell_price'],
+                    $item['qty'],
+                    $item['unit_type'] ?? 'Item',
+                    $item['items_per_unit'] ?? 1,
+                    $item['batch_number'] ?? null,
+                    $item['mfg_date'] ?? null,
+                    $item['exp_date'] ?? null
+                ]);
+                $item['id'] = $pdo->lastInsertId();
             }
+            echo json_encode($item);
+
+        } catch (PDOException $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
 
-        if ($found) {
-            $store->save('pharmacy_items', $stock);
-            echo json_encode(['success' => true]);
-        } else {
-            $res = $store->add('pharmacy_items', $item);
-            echo json_encode($res);
-        }
     } else {
-        $data = $store->get('pharmacy_items');
-        if (empty($data)) {
-            // Seed
-            $data = [
-                ['id' => 1, 'name' => 'Paracetamol', 'buy_price' => 10, 'sell_price' => 15, 'qty' => 100],
-                ['id' => 2, 'name' => 'Vitamin C', 'buy_price' => 5, 'sell_price' => 8, 'qty' => 50]
-            ];
-            $store->save('pharmacy_items', $data);
-        }
-        echo json_encode($data);
+        $stmt = $pdo->query("SELECT * FROM pharmacy_items");
+        echo json_encode($stmt->fetchAll());
     }
 } elseif ($action === 'sales') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sale = json_decode(file_get_contents("php://input"), true);
-        $res = $store->add('pharmacy_sales', $sale);
 
-        // Also update stock
-        // Assuming sale contains items: [{id: 1, qty: 2}]
-        if (isset($sale['items']) && is_array($sale['items'])) {
-            $stock = $store->get('pharmacy_items');
-            foreach ($sale['items'] as $soldItem) {
-                foreach ($stock as &$stockItem) {
-                    if ($stockItem['id'] == $soldItem['id']) {
-                        $stockItem['qty'] -= $soldItem['qty'];
-                    }
+        try {
+            $pdo->beginTransaction();
+
+            // 1. Insert Sale
+            $stmt = $pdo->prepare("INSERT INTO pharmacy_sales (date, total_amount, payment_method, bank_account_id, doctor_name, patient_name) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute([
+                $sale['date'] ?? date('Y-m-d H:i:s'),
+                $sale['total_amount'],
+                $sale['payment_method'] ?? 'cash',
+                $sale['bank_account_id'] ?? null,
+                $sale['doctor_name'] ?? null,
+                $sale['patient_name'] ?? null
+            ]);
+            $saleId = $pdo->lastInsertId();
+            $sale['id'] = $saleId;
+
+            // 2. Insert Items and Deduct Stock
+            if (isset($sale['items']) && is_array($sale['items'])) {
+                $stmtItem = $pdo->prepare("INSERT INTO pharmacy_sale_items (sale_id, item_id, item_name, quantity_sold, unit_sold_as, unit_price_at_sale, total_price) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmtUpdateStock = $pdo->prepare("UPDATE pharmacy_items SET qty = qty - ? WHERE id = ?");
+
+                foreach ($sale['items'] as $soldItem) {
+                    // Check if soldItem has 'id' (item_id)
+                    // Sometimes frontend sends it as 'id' or 'item_id'
+                    $itemId = $soldItem['id'] ?? $soldItem['item_id'];
+
+                    $stmtItem->execute([
+                        $saleId,
+                        $itemId,
+                        $soldItem['name'] ?? '',
+                        $soldItem['qty'],
+                        $soldItem['unit_sold_as'] ?? 'Item',
+                        $soldItem['price'] ?? 0,
+                        $soldItem['total'] ?? 0
+                    ]);
+
+                    // Deduct
+                    $stmtUpdateStock->execute([$soldItem['qty'], $itemId]);
                 }
             }
-            $store->save('pharmacy_items', $stock);
-        }
 
-        echo json_encode($res);
+            $pdo->commit();
+            echo json_encode($sale);
+
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
     } else {
-        echo json_encode($store->get('pharmacy_sales'));
+        // Fetch sales with items? Or just sales?
+        // Frontend likely just lists sales.
+        $stmt = $pdo->query("SELECT * FROM pharmacy_sales ORDER BY date DESC");
+        echo json_encode($stmt->fetchAll());
     }
 } else {
     echo json_encode([]);

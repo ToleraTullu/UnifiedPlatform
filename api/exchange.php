@@ -2,38 +2,77 @@
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
-require_once 'data_store.php';
+require_once 'db_connect.php';
 
 $action = $_GET['action'] ?? '';
-$store = new DataStore();
 
 if ($action === 'rates') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $rates = json_decode(file_get_contents("php://input"), true);
-        if ($store->save('exchange_rates', $rates)) {
+
+        try {
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("INSERT INTO exchange_rates (code, buy_rate, sell_rate) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE buy_rate = VALUES(buy_rate), sell_rate = VALUES(sell_rate)");
+
+            foreach ($rates as $code => $rate) {
+                $stmt->execute([$code, $rate['buy_rate'], $rate['sell_rate']]);
+            }
+            $pdo->commit();
             echo json_encode(['success' => true]);
-        } else {
-            echo json_encode(['success' => false]);
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     } else {
-        $data = $store->get('exchange_rates');
-        // Initial Seed if empty
-        if (empty($data)) {
-            $data = [
-                'USD' => ['buy_rate' => 1.0, 'sell_rate' => 1.02],
-                'EUR' => ['buy_rate' => 0.9, 'sell_rate' => 0.92]
+        $stmt = $pdo->query("SELECT * FROM exchange_rates");
+        $rows = $stmt->fetchAll();
+
+        // Format to match frontend expectation: { "USD": { "buy_rate": ..., "sell_rate": ... } }
+        $data = [];
+        foreach ($rows as $row) {
+            $data[$row['code']] = [
+                'buy_rate' => (float) $row['buy_rate'],
+                'sell_rate' => (float) $row['sell_rate']
             ];
-            $store->save('exchange_rates', $data);
         }
         echo json_encode($data);
     }
 } elseif ($action === 'transactions') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $item = json_decode(file_get_contents("php://input"), true);
-        $res = $store->add('exchange_transactions', $item);
-        echo json_encode($res);
+        $data = json_decode(file_get_contents("php://input"), true);
+
+        // Prepare INSERT
+        $sql = "INSERT INTO exchange_transactions 
+                (date, type, customer_name, customer_id, currency_code, amount, rate, total_local, payment_method, bank_account_id, external_bank_name, external_account_number) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        $stmt = $pdo->prepare($sql);
+
+        try {
+            $stmt->execute([
+                $data['date'] ?? date('Y-m-d H:i:s'),
+                $data['type'],
+                $data['customer_name'] ?? '',
+                $data['customer_id'] ?? '',
+                $data['currency_code'],
+                $data['amount'],
+                $data['rate'],
+                $data['total_local'],
+                $data['payment_method'] ?? 'cash',
+                $data['bank_account_id'] ?? null,
+                $data['external_bank_name'] ?? null,
+                $data['external_account_number'] ?? null
+            ]);
+            // Return item with new ID
+            $data['id'] = $pdo->lastInsertId();
+            echo json_encode($data);
+        } catch (PDOException $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+
     } else {
-        echo json_encode($store->get('exchange_transactions'));
+        $stmt = $pdo->query("SELECT * FROM exchange_transactions ORDER BY date DESC");
+        echo json_encode($stmt->fetchAll());
     }
 } else {
     echo json_encode([]);

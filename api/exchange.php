@@ -50,7 +50,7 @@ if ($action === 'rates') {
 
         try {
             $stmt->execute([
-                $data['date'] ?? date('Y-m-d H:i:s'),
+                date('Y-m-d H:i:s', strtotime($data['date'] ?? 'now')),
                 $data['type'],
                 $data['customer_name'] ?? '',
                 $data['customer_id'] ?? '',

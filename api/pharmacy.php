@@ -46,7 +46,7 @@ if ($action === 'stock') {
                 ]);
                 $item['id'] = $pdo->lastInsertId();
             }
-            echo json_encode($item);
+            echo json_encode(['success' => true, 'data' => $item]);
 
         } catch (PDOException $e) {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
@@ -102,7 +102,7 @@ if ($action === 'stock') {
             }
 
             $pdo->commit();
-            echo json_encode($sale);
+            echo json_encode(['success' => true, 'data' => $sale]);
 
         } catch (Exception $e) {
             $pdo->rollBack();

@@ -457,7 +457,7 @@ class PharmacyModule {
                 name: document.getElementById('st-name').value,
                 buy_price: parseFloat(document.getElementById('st-price').value),
                 // Qty Logic:
-                qty_added: parseInt(document.getElementById('st-qty').value),
+                qty: parseInt(document.getElementById('st-qty').value),
                 items_per_unit: parseInt(document.getElementById('st-per-unit').value),
                 unit_type: document.getElementById('st-unit').value,
 

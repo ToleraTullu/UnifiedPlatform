@@ -66,7 +66,7 @@ if ($action === 'rates') {
             ]);
             // Return item with new ID
             $data['id'] = $pdo->lastInsertId();
-            echo json_encode($data);
+            echo json_encode(['success' => true, 'data' => $data]);
         } catch (PDOException $e) {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }

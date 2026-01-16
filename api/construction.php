@@ -17,7 +17,7 @@ if ($action === 'sites') {
                 $data['status'] ?? 'Active'
             ]);
             $data['id'] = $pdo->lastInsertId();
-            echo json_encode($data);
+            echo json_encode(['success' => true, 'data' => $data]);
         } catch (PDOException $e) {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
@@ -41,7 +41,7 @@ if ($action === 'sites') {
                 $data['external_account_number'] ?? null
             ]);
             $data['id'] = $pdo->lastInsertId();
-            echo json_encode($data);
+            echo json_encode(['success' => true, 'data' => $data]);
         } catch (PDOException $e) {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
@@ -63,7 +63,7 @@ if ($action === 'sites') {
                 $data['bank_account_id'] ?? null
             ]);
             $data['id'] = $pdo->lastInsertId();
-            echo json_encode($data);
+            echo json_encode(['success' => true, 'data' => $data]);
         } catch (PDOException $e) {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }

@@ -30,7 +30,7 @@ if ($action === 'list') {
             ]);
             $data['id'] = $pdo->lastInsertId();
             unset($data['password']); // Don't return password
-            echo json_encode($data);
+            echo json_encode(['success' => true, 'data' => $data]);
         } catch (PDOException $e) {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }

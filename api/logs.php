@@ -28,7 +28,7 @@ if ($action === 'list') {
                 $data['created_at'] ?? date('Y-m-d H:i:s')
             ]);
             $data['id'] = $pdo->lastInsertId();
-            echo json_encode($data);
+            echo json_encode(['success' => true, 'data' => $data]);
         } catch (PDOException $e) {
             // Table might not exist yet?
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);

@@ -61,16 +61,36 @@ class DataStore {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(item)
             });
-            const result = await res.json();
-            // Some endpoints return {success: false, ...}
-            if (result && result.success === false) {
-                console.error(result.message);
-                throw new Error(result.message || 'API Error');
+            
+            // Check for HTTP errors first
+            if (!res.ok) {
+                let errorMsg = `HTTP Error ${res.status}`;
+                try {
+                    const errData = await res.json();
+                    if (errData.message) errorMsg = errData.message;
+                } catch(e) {}
+                throw new Error(errorMsg);
             }
-            return result.data || result; 
+
+            const result = await res.json();
+            
+            // Handle Standardized Backend Response { success: true, data: ... }
+            if (result && result.success) {
+                return result.data || result;
+            }
+            // Handle Legacy or Error Response
+            if (result && result.success === false) {
+                 const msg = result.message || 'Unknown API Error';
+                 console.error('API Error:', msg);
+                 throw new Error(msg);
+            }
+            
+            // Fallback for endpoints we might have missed or are just returning data directly
+            return result; 
         } catch (e) {
-            console.error(`Failed to add to ${key}:`, e);
-            throw e;
+            console.error(`Store.add failed for ${key}:`, e);
+            // Re-throw so the caller knows it failed!
+            throw e; 
         }
     }
 
@@ -123,7 +143,6 @@ class DataStore {
         const log = {
             action_type: action,
             module_name: module,
-            details: details,
             details: details,
             created_at: new Date().toISOString(),
             performed_by: (JSON.parse(sessionStorage.getItem('active_user') || '{}')).username || 'system'

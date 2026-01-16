@@ -43,8 +43,8 @@ if ($action === 'rates') {
 
         // Prepare INSERT
         $sql = "INSERT INTO exchange_transactions 
-                (date, type, customer_name, customer_id, currency_code, amount, rate, total_local, payment_method, bank_account_id, external_bank_name, external_account_number) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                (date, type, customer_name, customer_id, currency_code, amount, rate, total_local, description, payment_method, bank_account_id, external_bank_name, external_account_number) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $pdo->prepare($sql);
 
@@ -58,6 +58,7 @@ if ($action === 'rates') {
                 $data['amount'],
                 $data['rate'],
                 $data['total_local'],
+                $data['description'] ?? '',
                 $data['payment_method'] ?? 'cash',
                 $data['bank_account_id'] ?? null,
                 $data['external_bank_name'] ?? null,

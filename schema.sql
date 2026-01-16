@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS exchange_transactions (
     amount DECIMAL(15, 2) NOT NULL,
     rate DECIMAL(10, 4) NOT NULL,
     total_local DECIMAL(15, 2) NOT NULL,
+    description TEXT,
     payment_method ENUM('cash', 'bank') DEFAULT 'cash',
     bank_account_id INT NULL,
     external_bank_name VARCHAR(100) NULL,

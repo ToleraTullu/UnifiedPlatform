@@ -70,11 +70,11 @@
     const active = JSON.parse(sessionStorage.getItem('active_user'));
     if (active) redirectUser(active);
 
-    loginForm.addEventListener('submit', (e) => {
+    loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const u = document.getElementById('username').value.trim();
         const p = document.getElementById('password').value.trim();
-        const res = window.Auth.login(u, p);
+        const res = await window.Auth.login(u, p);
 
         if (res.success) redirectUser(res.user);
         else {

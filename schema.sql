@@ -130,6 +130,16 @@ CREATE TABLE IF NOT EXISTS construction_income (
     FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id)
 );
 
+-- 11. Activity Logs
+CREATE TABLE IF NOT EXISTS activity_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    action_type VARCHAR(50) NOT NULL,
+    module_name VARCHAR(50) NOT NULL,
+    details TEXT,
+    performed_by VARCHAR(50),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Initial Data Import (Optional)
 INSERT INTO users (username, password, role, name) VALUES 
 ('admin', '123', 'admin', 'Super Admin'),

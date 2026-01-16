@@ -1,10 +1,10 @@
 <?php
 // api/db_connect.php
 
-$host = 'localhost';
-$db = 'unified_platform';
-$user = 'root';
-$pass = ''; // Default XAMPP/WAMP password is empty
+$host = 'mysql-db03.remote:33636';
+$db = 'unifiedp';
+$user = 'DBuser';
+$pass = 'BRG0918803273';
 $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";

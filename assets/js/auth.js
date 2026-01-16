@@ -8,16 +8,26 @@ class Auth {
         this.currentUser = JSON.parse(sessionStorage.getItem('active_user'));
     }
 
-    login(username, password) {
-        const users = window.Store.get('unified_users');
-        const user = users.find(u => u.username === username && u.password === password);
-
-        if (user) {
-            sessionStorage.setItem('active_user', JSON.stringify(user));
-            this.currentUser = user;
-            return { success: true, user };
+    async login(username, password) {
+        try {
+            const res = await fetch('api/auth.php?action=login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                sessionStorage.setItem('active_user', JSON.stringify(data.user));
+                this.currentUser = data.user;
+                return { success: true, user: data.user };
+            } else {
+                return { success: false, message: data.message };
+            }
+        } catch (e) {
+            console.error(e);
+            return { success: false, message: 'Connection Error' };
         }
-        return { success: false, message: 'Invalid credentials' };
     }
 
     logout() {
@@ -26,7 +36,11 @@ class Auth {
     }
 
     checkAuth() {
-        if (!this.currentUser) {
+        // Simple check: if no user and not on index.html, redirect
+        const path = window.location.pathname;
+        const isLoginPage = path.endsWith('index.html') || path.endsWith('/');
+        
+        if (!this.currentUser && !isLoginPage) {
             window.location.href = 'index.html';
         }
     }
@@ -35,7 +49,6 @@ class Auth {
         if (!this.currentUser) return false;
         if (this.currentUser.role === 'admin') return true;
 
-        // Map roles to modules
         const permissions = {
             'exchange_user': ['exchange'],
             'pharmacy_user': ['pharmacy'],

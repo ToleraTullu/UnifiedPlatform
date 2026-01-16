@@ -74,6 +74,22 @@ if ($action === 'rates') {
         $stmt = $pdo->query("SELECT * FROM exchange_transactions ORDER BY date DESC");
         echo json_encode($stmt->fetchAll());
     }
+} elseif ($action === 'delete_transaction') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = json_decode(file_get_contents("php://input"), true);
+        $id = $data['id'] ?? null;
+
+        if ($id) {
+            $stmt = $pdo->prepare("DELETE FROM exchange_transactions WHERE id = ?");
+            if ($stmt->execute([$id])) {
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to delete']);
+            }
+        } else {
+            echo json_encode(['success' => false, 'message' => 'No ID provided']);
+        }
+    }
 } else {
     echo json_encode([]);
 }

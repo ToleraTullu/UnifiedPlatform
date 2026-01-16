@@ -14,7 +14,7 @@ if ($action === 'sites') {
             $stmt->execute([
                 $data['name'],
                 $data['location'] ?? '',
-                $data['status'] ?? 'active'
+                $data['status'] ?? 'Active'
             ]);
             $data['id'] = $pdo->lastInsertId();
             echo json_encode($data);

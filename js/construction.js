@@ -53,9 +53,9 @@ class ConstructionModule {
     async populateSiteSelects() {
         const sites = await window.Store.get(this.sitesKey) || [];
         // Only show Active sites in dropdown
-        const activeSites = sites.filter(s => s.status === 'Active');
+        const activeSites = sites.filter(s => s.status && s.status.toLowerCase() === 'active');
 
-        const opts = activeSites.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+        const opts = activeSites.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
         const defaultOpt = '<option value="" disabled selected>Select Site...</option>';
 
         const expSelect = document.getElementById('exp-site');
@@ -211,21 +211,24 @@ class ConstructionModule {
 
         const fd = new FormData(activeForm);
         const amount = parseFloat(fd.get('amount') || activeForm.querySelector('[name="amount"]')?.value || 0);
-        console.log(amount);
-        const site = fd.get('site') || activeForm.querySelector('select')?.value || 'N/A';
+
+        // Get Site Name for display (since value is now ID)
+        const siteSelect = activeForm.querySelector('select');
+        const siteName = siteSelect && siteSelect.selectedOptions[0] ? siteSelect.selectedOptions[0].text : 'N/A';
+        const siteId = fd.get('site') || siteSelect?.value;
 
         title.textContent = 'Finalize Payment';
 
         // Fetch eligible banks
         const allBanks = await window.Store.get('bank_accounts') || [];
-        const sectorBanks = allBanks.filter(b => !b.sectors || b.sectors.includes('construction') || b.sectors === 'all');
+        const sectorBanks = allBanks.filter(b => !b.sectors || (typeof b.sectors === 'string' ? b.sectors.includes('construction') : b.sectors.includes('construction')) || b.sectors === 'all');
         const bankOptions = sectorBanks.map(b => `<option value="${b.id}">${b.bank_name} - ${b.account_number}</option>`).join('');
 
         body.innerHTML = `
             <div style="margin-bottom:20px; padding:15px; background:var(--bg-input); border-radius:8px; text-align:center;">
                 <div style="font-size:0.9rem; color:var(--text-muted); text-transform:uppercase;">Total Amount to ${type === 'expense' ? 'PAY' : 'RECEIVE'}</div>
                 <div style="font-size:2rem; font-weight:800; color:var(--text-main);">${amount.toFixed(2)} <span style="font-size:1rem; font-weight:400;">USD</span></div>
-                <div style="font-size:0.9rem; margin-top:5px;">Site: ${site}</div>
+                <div style="font-size:0.9rem; margin-top:5px;">Site: ${siteName}</div>
             </div>
 
             <form id="payment-finalize-form">
@@ -290,7 +293,7 @@ class ConstructionModule {
             const siteId = type === 'expense' ? 'exp-site' : 'inc-site';
 
             const data = {
-                site: document.getElementById(siteId).value,
+                site_id: document.getElementById(siteId).value,
                 description: document.getElementById(descId).value,
                 amount: parseFloat(document.getElementById(amtId).value),
                 date: document.getElementById(dateId).value,

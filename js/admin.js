@@ -67,28 +67,27 @@ class AdminModule {
         const fd = new FormData(form);
         const uname = fd.get('username').trim();
         const editMode = document.getElementById('edit-mode').value;
-        let users = await window.Store.get(this.usersKey) || [];
 
         if (editMode) {
-            const idx = users.findIndex(u => u.username === editMode);
-            if (idx !== -1) {
-                users[idx].name = fd.get('name');
-                users[idx].role = fd.get('role');
-                if (fd.get('password')) users[idx].password = fd.get('password');
-            }
-        } else {
-            if (users.some(u => u.username === uname)) return alert('Username already exists');
-            users.push({
-                username: uname,
-                password: fd.get('password'),
-                name: fd.get('name') || '',
-                role: fd.get('role')
-            });
+            alert('Edit User not yet implemented with MySQL backend.');
+            return;
         }
 
-        await window.Store.set(this.usersKey, users);
-        this.resetUserForm();
-        await this.renderUsers();
+        const newUser = {
+            username: uname,
+            password: fd.get('password'),
+            name: fd.get('name') || '',
+            role: fd.get('role')
+        };
+
+        const result = await window.Store.add(this.usersKey, newUser);
+        
+        if (result) {
+            this.resetUserForm();
+            await this.renderUsers();
+        } else {
+            alert('Failed to add user');
+        }
     }
 
     async deleteUser(uname) {
@@ -156,9 +155,14 @@ class AdminModule {
         tbody.innerHTML = '';
 
         banks.forEach(b => {
-            const sectors = Array.isArray(b.sectors) ? b.sectors.map(s => {
-                const badgeClass = `badge-${s}`;
-                return `<span class="badge ${badgeClass}" style="margin-right:4px;">${s}</span>`;
+            // Normalize sectors (could be array or CSV string)
+            let sList = [];
+            if (Array.isArray(b.sectors)) sList = b.sectors;
+            else if (typeof b.sectors === 'string') sList = b.sectors.split(',');
+
+            const sectors = sList.length > 0 ? sList.map(s => {
+                const badgeClass = `badge-${s.trim()}`;
+                return `<span class="badge ${badgeClass}" style="margin-right:4px;">${s.trim()}</span>`;
             }).join('') : '<span class="text-muted">All Sectors</span>';
 
             const tr = document.createElement('tr');
@@ -193,25 +197,27 @@ class AdminModule {
         form.querySelectorAll('input[name="sector"]:checked').forEach(cb => sectors.push(cb.value));
 
         const hiddenId = document.getElementById('bank-id').value;
+        
+        if (hiddenId) {
+             alert('Edit Bank not yet implemented with MySQL backend.');
+             return;
+        }
+
         const bankObj = {
-            id: hiddenId ? parseInt(hiddenId) : Date.now(),
             bank_name: fd.get('bank_name'),
             account_number: fd.get('account_number'),
             account_holder: fd.get('account_holder'),
-            sectors: sectors.length > 0 ? sectors : ['exchange', 'pharmacy', 'construction']
+            sectors: sectors.length > 0 ? sectors.join(',') : 'all'
         };
 
-        let banks = await window.Store.get(this.banksKey) || [];
-        if (hiddenId) {
-            const idx = banks.findIndex(b => b.id == bankObj.id);
-            if (idx !== -1) banks[idx] = bankObj;
-        } else {
-            banks.push(bankObj);
-        }
+        const result = await window.Store.add(this.banksKey, bankObj);
 
-        await window.Store.set(this.banksKey, banks);
-        this.resetBankForm();
-        await this.renderBanks();
+        if (result) {
+            this.resetBankForm();
+            await this.renderBanks();
+        } else {
+           alert('Failed to add bank');
+        }
     }
 
     async deleteBank(id) {

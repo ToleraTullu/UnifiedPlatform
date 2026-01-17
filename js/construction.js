@@ -101,7 +101,7 @@ class ConstructionModule {
 
             await this.saveSite({ name, status });
 
-            await this.saveSite({ name, status });
+
 
             UI.success('Site Added Successfully');
             close();

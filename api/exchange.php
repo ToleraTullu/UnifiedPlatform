@@ -60,7 +60,7 @@ if ($action === 'rates') {
                 $data['total_local'],
                 $data['description'] ?? '',
                 $data['payment_method'] ?? 'cash',
-                $data['bank_account_id'] ?? null,
+                !empty($data['bank_account_id']) ? $data['bank_account_id'] : null,
                 $data['external_bank_name'] ?? null,
                 $data['external_account_number'] ?? null
             ]);

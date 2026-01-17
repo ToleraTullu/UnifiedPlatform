@@ -98,7 +98,11 @@ class DataStore {
         let url = '';
         if (key === 'bank_accounts') url = API_BASE + 'bank_accounts.php?action=delete';
         else if (key === 'unified_users') url = API_BASE + 'users.php?action=delete';
-        else if (key === 'exchange_transactions') url = API_BASE + 'exchange.php?action=delete_transaction'; // Need to impl
+        else if (key === 'exchange_transactions') url = API_BASE + 'exchange.php?action=delete_transaction'; 
+        else if (key === 'construction_sites') url = API_BASE + 'construction.php?action=delete_site';
+        else if (key === 'construction_expenses') url = API_BASE + 'construction.php?action=delete_expense';
+        else if (key === 'construction_income') url = API_BASE + 'construction.php?action=delete_income';
+        else if (key === 'pharmacy_sales') url = API_BASE + 'pharmacy.php?action=delete_sale';
         
         if (!url) {
             console.warn(`Delete not implemented for ${key} in Store/API`);

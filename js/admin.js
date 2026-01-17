@@ -46,7 +46,7 @@ class AdminModule {
                 </td>
                 <td style="text-align:right">
                     <button class="btn-secondary edit-user" data-user="${u.username}" style="padding:5px 10px; font-size:0.8rem;">Edit</button> 
-                    <button class="btn-danger delete-user" data-user="${u.username}" style="padding:5px 10px; font-size:0.8rem;">Delete</button>
+                    <button class="btn-danger delete-user" data-id="${u.id}" data-user="${u.username}" style="padding:5px 10px; font-size:0.8rem;">Delete</button>
                 </td>`;
             tbody.appendChild(tr);
         });
@@ -56,7 +56,8 @@ class AdminModule {
             const btn = ev.target.closest('button');
             if (!btn) return;
             const uname = btn.dataset.user;
-            if (btn.classList.contains('delete-user')) this.deleteUser(uname);
+            const id = btn.dataset.id;
+            if (btn.classList.contains('delete-user')) this.deleteUser(id, uname);
             else if (btn.classList.contains('edit-user')) this.editUser(uname);
         };
     }
@@ -90,12 +91,15 @@ class AdminModule {
         }
     }
 
-    async deleteUser(uname) {
+    async deleteUser(id, uname) {
         if (!confirm('Delete user @' + uname + '?')) return;
-        let users = await window.Store.get(this.usersKey) || [];
-        users = users.filter(u => u.username !== uname);
-        await window.Store.set(this.usersKey, users);
-        await this.renderUsers();
+        
+        const success = await window.Store.remove(this.usersKey, id);
+        if (success) {
+            this.renderUsers();
+        } else {
+            alert('Failed to delete user.');
+        }
     }
 
     async editUser(uname) {
@@ -222,10 +226,12 @@ class AdminModule {
 
     async deleteBank(id) {
         if (!confirm('Delete this bank account?')) return;
-        let banks = await window.Store.get(this.banksKey) || [];
-        banks = banks.filter(b => b.id !== id);
-        await window.Store.set(this.banksKey, banks);
-        await this.renderBanks();
+        const success = await window.Store.remove(this.banksKey, id);
+        if (success) {
+            this.renderBanks();
+        } else {
+             alert('Failed to delete bank account.');
+        }
     }
 
     async editBank(id) {

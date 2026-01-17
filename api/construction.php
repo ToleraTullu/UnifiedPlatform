@@ -71,6 +71,42 @@ if ($action === 'sites') {
         $stmt = $pdo->query("SELECT * FROM construction_income ORDER BY date DESC");
         echo json_encode($stmt->fetchAll());
     }
+} elseif ($action === 'delete_site') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = json_decode(file_get_contents("php://input"), true);
+        if (isset($data['id'])) {
+            $stmt = $pdo->prepare("DELETE FROM construction_sites WHERE id = ?");
+            if ($stmt->execute([$data['id']])) {
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Delete failed']);
+            }
+        }
+    }
+} elseif ($action === 'delete_expense') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = json_decode(file_get_contents("php://input"), true);
+        if (isset($data['id'])) {
+            $stmt = $pdo->prepare("DELETE FROM construction_expenses WHERE id = ?");
+            if ($stmt->execute([$data['id']])) {
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Delete failed']);
+            }
+        }
+    }
+} elseif ($action === 'delete_income') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = json_decode(file_get_contents("php://input"), true);
+        if (isset($data['id'])) {
+            $stmt = $pdo->prepare("DELETE FROM construction_income WHERE id = ?");
+            if ($stmt->execute([$data['id']])) {
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Delete failed']);
+            }
+        }
+    }
 } else {
     echo json_encode([]);
 }

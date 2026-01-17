@@ -25,7 +25,7 @@ if ($action === 'list') {
                 $data['module_name'],
                 $data['details'],
                 $data['performed_by'] ?? 'system',
-                $data['created_at'] ?? date('Y-m-d H:i:s')
+                isset($data['created_at']) ? date('Y-m-d H:i:s', strtotime($data['created_at'])) : date('Y-m-d H:i:s')
             ]);
             $data['id'] = $pdo->lastInsertId();
             echo json_encode(['success' => true, 'data' => $data]);

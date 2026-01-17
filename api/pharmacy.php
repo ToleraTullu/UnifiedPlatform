@@ -109,10 +109,20 @@ if ($action === 'stock') {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     } else {
-        // Fetch sales with items? Or just sales?
-        // Frontend likely just lists sales.
         $stmt = $pdo->query("SELECT * FROM pharmacy_sales ORDER BY date DESC");
         echo json_encode($stmt->fetchAll());
+    }
+} elseif ($action === 'delete_sale') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = json_decode(file_get_contents("php://input"), true);
+        if (isset($data['id'])) {
+            $stmt = $pdo->prepare("DELETE FROM pharmacy_sales WHERE id = ?");
+            if ($stmt->execute([$data['id']])) {
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Delete failed']);
+            }
+        }
     }
 } else {
     echo json_encode([]);

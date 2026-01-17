@@ -124,6 +124,8 @@ class ConstructionModule {
             return;
         }
 
+        const isAdmin = window.Auth && window.Auth.currentUser && window.Auth.currentUser.role === 'admin';
+
         tbody.innerHTML = sites.map(s => `
             <tr>
                 <td><strong>${s.name}</strong></td>
@@ -134,9 +136,21 @@ class ConstructionModule {
                 </td>
                 <td>
                     <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size: 0.8rem">Manage</button>
+                    ${isAdmin ? `<button class="btn-danger" onclick="window.ConstructionModule.deleteSite(${s.id})" style="padding:0.2rem 0.5rem; font-size: 0.8rem; margin-left:5px">Delete</button>` : ''}
                 </td>
             </tr>
         `).join('');
+    }
+
+    async deleteSite(id) {
+        if (!confirm('Are you sure you want to delete this site?')) return;
+        const success = await window.Store.remove(this.sitesKey, id);
+        if (success) {
+            UI.success('Site deleted.');
+            this.renderSites();
+        } else {
+             UI.error('Failed to delete site.');
+        }
     }
 
     getStatusColor(status) {

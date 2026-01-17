@@ -112,6 +112,18 @@ if ($action === 'stock') {
         $stmt = $pdo->query("SELECT * FROM pharmacy_sales ORDER BY date DESC");
         echo json_encode($stmt->fetchAll());
     }
+} elseif ($action === 'delete_stock') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = json_decode(file_get_contents("php://input"), true);
+        if (isset($data['id'])) {
+            $stmt = $pdo->prepare("DELETE FROM pharmacy_items WHERE id = ?");
+            if ($stmt->execute([$data['id']])) {
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Delete failed']);
+            }
+        }
+    }
 } elseif ($action === 'delete_sale') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data = json_decode(file_get_contents("php://input"), true);

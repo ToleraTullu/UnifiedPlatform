@@ -355,6 +355,8 @@ class PharmacyModule {
 
         tbody.innerHTML = '';
 
+        const isAdmin = window.Auth && window.Auth.currentUser && window.Auth.currentUser.role === 'admin';
+
         items.forEach(item => {
             const tr = document.createElement('tr');
 
@@ -375,17 +377,29 @@ class PharmacyModule {
                 <td>${item.id}</td>
                 <td>
                     <b>${item.name}</b><br>
-                    <small class="text-muted">Batch: ${item.batch || '-'}</small>
+                    <small class="text-muted">Batch: ${item.batch_number || '-'}</small>
                 </td>
                 <td>$${parseFloat(item.sell_price || (item.buy_price * 1.5)).toFixed(2)} per ${item.unit_type || 'item'}</td>
                 <td>${item.qty} ${item.unit_type || 'Items'}</td>
                 <td>${item.exp_date || '-'}</td>
                 <td>
                     <button class="btn-secondary" onclick="window.PharmacyModule.openStockModal(${item.id})">Edit</button>
+                    ${isAdmin ? `<button class="btn-danger" onclick="window.PharmacyModule.deleteStockItem(${item.id})" style="margin-left:5px">Delete</button>` : ''}
                 </td>
             `;
             tbody.appendChild(tr);
         });
+    }
+
+    async deleteStockItem(id) {
+        if (!confirm('Are you sure you want to delete this product?')) return;
+        const success = await window.Store.remove(this.stockKey, id);
+        if (success) {
+            UI.success('Item deleted.');
+            this.renderStock();
+        } else {
+            UI.error('Failed to delete item.');
+        }
     }
 
     async openStockModal(itemId = null) {
@@ -434,7 +448,7 @@ class PharmacyModule {
                 
                 <div class="form-group">
                     <label>Batch Number</label>
-                    <input type="text" id="st-batch" value="${item ? item.batch || '' : ''}">
+                    <input type="text" id="st-batch" value="${item ? item.batch_number || '' : ''}">
                 </div>
                 <div class="form-group">
                     <label>Manufacture Date</label>
@@ -463,7 +477,7 @@ class PharmacyModule {
 
                 // New Fields
                 sell_price: parseFloat(document.getElementById('st-sell-price').value),
-                batch: document.getElementById('st-batch').value,
+                batch_number: document.getElementById('st-batch').value,
                 mfg_date: document.getElementById('st-mfg').value,
                 exp_date: document.getElementById('st-exp').value
             }, item);

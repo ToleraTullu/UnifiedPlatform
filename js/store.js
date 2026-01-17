@@ -102,6 +102,7 @@ class DataStore {
         else if (key === 'construction_sites') url = API_BASE + 'construction.php?action=delete_site';
         else if (key === 'construction_expenses') url = API_BASE + 'construction.php?action=delete_expense';
         else if (key === 'construction_income') url = API_BASE + 'construction.php?action=delete_income';
+        else if (key === 'pharmacy_items') url = API_BASE + 'pharmacy.php?action=delete_stock';
         else if (key === 'pharmacy_sales') url = API_BASE + 'pharmacy.php?action=delete_sale';
         
         if (!url) {

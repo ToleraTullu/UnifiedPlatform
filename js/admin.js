@@ -297,8 +297,8 @@ class AdminModule {
             const color = colors[log.action_type] || '#64748b';
             return `
                 <tr>
-                    <td style="font-size:0.85rem; color:var(--text-muted)">${new Date(log.timestamp).toLocaleString()}</td>
-                    <td style="font-weight:600">@${log.current_user}</td>
+                    <td style="font-size:0.85rem; color:var(--text-muted)">${new Date(log.created_at).toLocaleString()}</td>
+                    <td style="font-weight:600">@${log.performed_by}</td>
                     <td>
                         <span class="badge" style="background:${color}; color:white;">
                             ${log.action_type}

@@ -335,7 +335,14 @@ class ConstructionModule {
     }
 
     async saveTransaction(key, data) {
-        data.date = new Date(data.date).toISOString();
+        // Format date to YYYY-MM-DD HH:MM:SS for MySQL
+        const inputDate = new Date(data.date);
+        const now = new Date();
+        inputDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+        
+        // Manual formatting to ensure correct string result
+        const pad = (num) => num.toString().padStart(2, '0');
+        data.date = `${inputDate.getFullYear()}-${pad(inputDate.getMonth() + 1)}-${pad(inputDate.getDate())} ${pad(inputDate.getHours())}:${pad(inputDate.getMinutes())}:${pad(inputDate.getSeconds())}`;
         const newItem = await window.Store.add(key, data);
 
         await window.Store.addActivityLog({

@@ -347,7 +347,7 @@ class PharmacyModule {
         const tbody = document.getElementById('pharmacy-stock-body');
         if (!tbody) return;
 
-        // Header needs update too - let's inject it if missing or just overwrite body
+        // Header needs update
         const thead = document.querySelector('#view-pharmacy-stock thead tr');
         if (thead && thead.children.length === 5) {
             thead.innerHTML += `<th>Expiry</th>`;
@@ -372,6 +372,12 @@ class PharmacyModule {
                 }
             }
 
+            // Unit Approximation
+            const perUnit = item.items_per_unit || 1;
+            const units = Math.floor((item.qty || 0) / perUnit);
+            const remainder = (item.qty || 0) % perUnit;
+            const unitText = item.unit_type !== 'Item' ? `(${units} ${item.unit_type}${remainder > 0 ? ' + ' + remainder : ''})` : '';
+
             tr.className = expiryClass;
             tr.innerHTML = `
                 <td>${item.id}</td>
@@ -379,8 +385,8 @@ class PharmacyModule {
                     <b>${item.name}</b><br>
                     <small class="text-muted">Batch: ${item.batch_number || '-'}</small>
                 </td>
-                <td>$${parseFloat(item.sell_price || (item.buy_price * 1.5)).toFixed(2)} per ${item.unit_type || 'item'}</td>
-                <td>${item.qty} ${item.unit_type || 'Items'}</td>
+                <td>$${parseFloat(item.sell_price || (item.buy_price * 1.5)).toFixed(2)} per ${item.unit_type || 'Item'}</td>
+                <td>${item.qty} Items <small class="text-muted">${unitText}</small></td>
                 <td>${item.exp_date || '-'}</td>
                 <td>
                     <button class="btn-secondary" onclick="window.PharmacyModule.openStockModal(${item.id})">Edit</button>
@@ -407,7 +413,7 @@ class PharmacyModule {
         const item = itemId ? items.find(i => i.id === itemId) : null;
 
         const modal = document.getElementById('modal-container');
-        document.getElementById('modal-title').textContent = item ? 'Edit Item' : 'New Product';
+        document.getElementById('modal-title').textContent = item ? 'Restock / Edit Item' : 'New Product';
 
         const body = document.getElementById('modal-body');
         body.innerHTML = `
@@ -418,12 +424,8 @@ class PharmacyModule {
                     <input type="text" id="st-name" value="${item ? item.name : ''}" required>
                 </div>
                 <div class="form-group">
-                    <label>Buy Price</label>
+                    <label>Buy Price (Per Unit/Box)</label>
                     <input type="number" id="st-price" value="${item ? item.buy_price : ''}" required step="0.01">
-                </div>
-                <div class="form-group">
-                    <label>Qty to Add (Units/Boxes)</label>
-                    <input type="number" id="st-qty" value="0" required>
                 </div>
                 <!-- Logic: Unit Type -->
                 <div class="form-group">
@@ -436,11 +438,18 @@ class PharmacyModule {
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Items Per Unit (e.g. 20 pills per Box)</label>
+                    <label>Items Per Unit (e.g. 100 per Box)</label>
                     <input type="number" id="st-per-unit" value="${item ? item.items_per_unit || 1 : 1}" required min="1">
                     <small>For Single Items, enter 1</small>
                 </div>
                 
+                <div class="form-group" style="background:var(--bg-input); padding:10px; border-radius:5px;">
+                    <label>Qty to Add (in Units selected above)</label>
+                    <input type="number" id="st-qty" value="0" required min="0">
+                    <small>Entering 5 Boxes (100/box) will add 500 items.</small>
+                    ${item ? `<div style="margin-top:5px; font-weight:bold;">Current Stock: ${item.qty} Items</div>` : ''}
+                </div>
+
                 <div class="form-group">
                     <label>Sell Price (Per Unit)</label>
                     <input type="number" id="st-sell-price" value="${item ? item.sell_price || '' : ''}" required step="0.01">
@@ -459,7 +468,7 @@ class PharmacyModule {
                     <input type="date" id="st-exp" value="${item ? item.exp_date || '' : ''}">
                 </div>
 
-                <button type="submit" class="btn-primary">Save</button>
+                <button type="submit" class="btn-primary">Save Product</button>
             </form>
         `;
 
@@ -470,12 +479,11 @@ class PharmacyModule {
                 id: document.getElementById('st-id').value,
                 name: document.getElementById('st-name').value,
                 buy_price: parseFloat(document.getElementById('st-price').value),
-                // Qty Logic:
-                qty: parseInt(document.getElementById('st-qty').value),
+                // Qty Logic: NOT direct value
+                inputQty: parseInt(document.getElementById('st-qty').value), 
                 items_per_unit: parseInt(document.getElementById('st-per-unit').value),
                 unit_type: document.getElementById('st-unit').value,
 
-                // New Fields
                 sell_price: parseFloat(document.getElementById('st-sell-price').value),
                 batch_number: document.getElementById('st-batch').value,
                 mfg_date: document.getElementById('st-mfg').value,
@@ -493,13 +501,37 @@ class PharmacyModule {
         // Store.add in new implementation handles both Add and Update if API supports it.
         // Our PHP API Pharmacy 'stock' endpoints merges if ID exists.
 
+        // Calculate Total Singles
+        const unitQty = formData.inputQty || 0;
+        const perUnit = formData.items_per_unit || 1;
+        const totalNewSingles = unitQty * perUnit;
+        
+        let finalQty = totalNewSingles;
+        
+        if (originalItem) {
+            // Add to existing
+            finalQty += (originalItem.qty || 0);
+        }
+
         let payload = {
             ...formData,
-            // Ensure ID is passed if editing
+            qty: finalQty, // Calculated Total
+            // Removed helper field 'inputQty'
             id: originalItem ? originalItem.id : undefined
         };
+        delete payload.inputQty;
 
         await window.Store.add(this.stockKey, payload);
+        
+        // Log if added stock
+        if (totalNewSingles > 0) {
+             await window.Store.addActivityLog({
+                action_type: originalItem ? 'RESTOCK' : 'NEW_ITEM',
+                module_name: 'Pharmacy',
+                details: `Added ${unitQty} ${formData.unit_type} of ${formData.name} (${totalNewSingles} singles)`
+            });
+        }
+        
         this.renderStock();
     }
 

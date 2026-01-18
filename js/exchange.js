@@ -27,19 +27,7 @@ class ExchangeModule {
             if(e.target.id === 'btn-update-rates') this.showRatesForm(); // Helper if needed
         });
         
-        // Dynamic Change Listeners for Rate Calculation
-        document.addEventListener('change', (e) => {
-            if(e.target.id === 'ex-buy-currency') this.updateRateDisplay('buy');
-            if(e.target.id === 'ex-sell-currency') this.updateRateDisplay('sell');
-            // Amount calc
-            if(e.target.id === 'ex-buy-amt') this.calculateTotal('buy');
-            if(e.target.id === 'ex-sell-amt') this.calculateTotal('sell');
-        });
-        
-        document.addEventListener('input', (e) => {
-             if(e.target.id === 'ex-buy-amt') this.calculateTotal('buy');
-             if(e.target.id === 'ex-sell-amt') this.calculateTotal('sell');
-        });
+        // Removed broken global listeners for calculation; renderForm handles this locally.
     }
 
     async init() {
@@ -208,7 +196,7 @@ class ExchangeModule {
 
         // Form Structure (No payment fields here anymore)
         const formHtml = `
-            <form id="transaction-form">
+            <form id="transaction-form" data-type="${type}">
                 <div class="form-group">
                     <label>Customer Full Name</label>
                     <input type="text" name="customer" required placeholder="Full Name" class="form-control">
@@ -221,7 +209,7 @@ class ExchangeModule {
                     <div class="col-md-6">
                         <div class="form-group">
                             <label>Currency</label>
-                            <select name="currency_code" class="form-control" required>
+                            <select name="currency_code" id="ex-${type}-currency" class="form-control" required>
                                 <option value="">Select Currency</option>
                                 ${currencyOptions}
                             </select>
@@ -230,7 +218,7 @@ class ExchangeModule {
                     <div class="col-md-6">
                         <div class="form-group">
                             <label>Amount</label>
-                            <input type="number" name="amount" class="form-control" step="0.01" required placeholder="0.00">
+                            <input type="number" name="amount" id="ex-${type}-amt" class="form-control" step="0.01" required placeholder="0.00">
                         </div>
                     </div>
                 </div>
@@ -263,7 +251,7 @@ class ExchangeModule {
         `;
 
         if (container.tagName === 'FORM') {
-            container.innerHTML = formHtml.replace('<form id="transaction-form">', '').replace('</form>', '');
+            container.innerHTML = formHtml.replace('<form id="transaction-form" data-type="${type}">', '').replace('</form>', '');
             this.activeForm = container;
         } else {
             container.innerHTML = formHtml;
@@ -308,7 +296,10 @@ class ExchangeModule {
         };
 
         amountInput.addEventListener('input', calculateTotal);
+        // Add change listener as well for robustness
+        amountInput.addEventListener('change', calculateTotal);
         rateInput.addEventListener('input', calculateTotal);
+        rateInput.addEventListener('change', calculateTotal);
 
         this.activeForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -675,6 +666,9 @@ class ExchangeModule {
         transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         transactions.forEach(tx => {
+            // FIX: Use customer_name or fallback to customer
+            const customerName = tx.customer_name || tx.customer || 'Unidentified';
+
             // MAIN ROW
             const tr = document.createElement('tr');
             
@@ -685,7 +679,7 @@ class ExchangeModule {
                 </td>
                 <td>${new Date(tx.date).toLocaleString()}</td>
                 <td><span style="font-weight:bold; color:${tx.type === 'buy' ? 'green' : 'red'}">${tx.type.toUpperCase()}</span></td>
-                <td>${tx.customer}</td>
+                <td>${customerName}</td>
                 <td>${tx.currency_code}</td>
                 <td>${parseFloat(tx.amount).toFixed(2)}</td>
                 <td>${parseFloat(tx.rate).toFixed(4)}</td>
@@ -712,8 +706,8 @@ class ExchangeModule {
             trDetail.innerHTML = `
                 <td colspan="${isAdmin ? 9 : 8}" style="padding:15px 20px;">
                     <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:20px;">
-                        <div><strong>Full Name:</strong> ${tx.customer}</div>
-                        <div><strong>ID Number:</strong> ${tx.cid || 'N/A'}</div>
+                        <div><strong>Full Name:</strong> ${customerName}</div>
+                        <div><strong>ID Number:</strong> ${tx.cid || tx.customer_id || 'N/A'}</div>
                         <div><strong>Payment Method:</strong> ${paymentInfo}</div>
                         ${tx.description ? `<div><strong>Notes:</strong> ${tx.description}</div>` : ''}
                     </div>

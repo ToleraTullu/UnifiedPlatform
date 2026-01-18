@@ -12,7 +12,10 @@ if ($action === 'rates') {
 
         try {
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare("INSERT INTO exchange_rates (code, buy_rate, sell_rate) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE buy_rate = VALUES(buy_rate), sell_rate = VALUES(sell_rate)");
+            // Clear existing rates to allow "deletion" by omission in the UI
+            $pdo->exec("DELETE FROM exchange_rates");
+
+            $stmt = $pdo->prepare("INSERT INTO exchange_rates (code, buy_rate, sell_rate) VALUES (?, ?, ?)");
 
             foreach ($rates as $code => $rate) {
                 $stmt->execute([$code, $rate['buy_rate'], $rate['sell_rate']]);
@@ -27,7 +30,7 @@ if ($action === 'rates') {
         $stmt = $pdo->query("SELECT * FROM exchange_rates");
         $rows = $stmt->fetchAll();
 
-        // Format to match frontend expectation: { "USD": { "buy_rate": ..., "sell_rate": ... } }
+        // Format to match frontend expectation
         $data = [];
         foreach ($rows as $row) {
             $data[$row['code']] = [
@@ -49,6 +52,9 @@ if ($action === 'rates') {
         $stmt = $pdo->prepare($sql);
 
         try {
+            // Fix: Handle empty string for bank_account_id as NULL
+            $bankAccountId = !empty($data['bank_account_id']) ? $data['bank_account_id'] : null;
+
             $stmt->execute([
                 date('Y-m-d H:i:s', strtotime($data['date'] ?? 'now')),
                 $data['type'],
@@ -60,7 +66,7 @@ if ($action === 'rates') {
                 $data['total_local'],
                 $data['description'] ?? '',
                 $data['payment_method'] ?? 'cash',
-                !empty($data['bank_account_id']) ? $data['bank_account_id'] : null,
+                $bankAccountId,
                 $data['external_bank_name'] ?? null,
                 $data['external_account_number'] ?? null
             ]);

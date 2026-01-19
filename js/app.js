@@ -60,7 +60,7 @@ class App {
                 notifModal.classList.add('hidden');
             });
         }
-        
+
         // Generic Modal Close
         const genericModal = document.getElementById('modal-container');
         if (genericModal) {
@@ -146,7 +146,7 @@ class App {
             if (window.ExchangeModule && window.ExchangeModule.calculateHoldings) {
                 const vault = await window.ExchangeModule.calculateHoldings();
                 const thresholds = { USD: 1000, EUR: 1000, GBP: 1000, LOCAL: 10000 };
-                
+
                 Object.keys(thresholds).forEach(curr => {
                     if (vault[curr] < thresholds[curr]) {
                         count++;
@@ -400,25 +400,31 @@ class App {
         if (window.PharmacyModule) await window.PharmacyModule.updateStats();
         if (window.ConstructionModule) await window.ConstructionModule.updateStats();
 
-        // Calculate Net Platform Profit (Estimate)
-        // Exchange: Estimate profit as 1% of volume (mock logic) or just use volume for now?
-        // Let's use: Pharmacy Sales + Construction Balance + (Exchange Volume * 0.01)
-
+        // Calculate Net Platform Profit (Estimate) using robust parsing
         const exTx = await window.Store.get('exchange_transactions') || [];
-        const exVol = exTx.reduce((a, c) => a + (c.amount * c.rate), 0);
+        const exVol = exTx.reduce((a, c) => a + ((parseFloat(c.amount) || 0) * (parseFloat(c.rate) || 0)), 0);
         const exProfit = exVol * 0.02; // Assume 2% spread revenue
 
         const phTx = await window.Store.get('pharmacy_sales') || [];
-        const phRev = phTx.reduce((a, c) => a + c.total, 0); // Revenue, not profit, but approx for now
+        const phRev = phTx.reduce((a, c) => a + (parseFloat(c.total) || 0), 0);
 
         const coExp = await window.Store.get('construction_expenses') || [];
         const coInc = await window.Store.get('construction_income') || [];
-        const coBal = coInc.reduce((a, c) => a + c.amount, 0) - coExp.reduce((a, c) => a + c.amount, 0);
+        const totCoExp = coExp.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
+        const totCoInc = coInc.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
+        const coBal = totCoInc - totCoExp;
 
         const netProfit = exProfit + phRev + coBal;
 
-        const npEl = document.getElementById('stat-net-profit');
-        if (npEl) npEl.textContent = netProfit.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+        const setTxt = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = (val || 0).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+        };
+
+        setTxt('stat-exchange', exVol);
+        setTxt('stat-pharmacy', phRev);
+        setTxt('stat-construction', coBal);
+        setTxt('stat-net-profit', netProfit);
 
         await this.renderActivityStream();
     }
@@ -451,7 +457,7 @@ class App {
         const exTx = await window.Store.get('exchange_transactions') || [];
         activities = activities.concat(exTx.map(t => ({
             time: t.date,
-            desc: `Exchange: ${t.type.toUpperCase()} ${t.currency_code} ${parseFloat(t.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`,
+            desc: `Exchange: ${t.type.toUpperCase()} ${t.currency_code} ${parseFloat(t.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
             type: 'exchange'
         })));
 
@@ -459,7 +465,7 @@ class App {
         const phTx = await window.Store.get('pharmacy_sales') || [];
         activities = activities.concat(phTx.map(t => ({
             time: t.date ? t.date : new Date().toISOString(), // fallback
-            desc: `Pharmacy: Sale of ${t.total.toLocaleString(undefined, {style: 'currency', currency: 'USD'})}`,
+            desc: `Pharmacy: Sale of ${t.total.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}`,
             type: 'pharmacy'
         })));
 
@@ -495,5 +501,9 @@ class App {
 
 document.addEventListener('DOMContentLoaded', () => {
     window.Auth.checkAuth();
-    window.App = new App();
+
+    // Defer initialization to ensure all modules are loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        window.App = new App();
+    });
 });

@@ -1,14 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>UniManage - Bank Management</title>
   <link rel="stylesheet" href="../assets/css/style.css">
   <style>
-    .sector-checks label { margin-right: 15px; cursor: pointer; }
+    .sector-checks label {
+      margin-right: 15px;
+      cursor: pointer;
+    }
   </style>
 </head>
+
 <body>
   <div class="app-container">
     <aside class="sidebar"></aside>
@@ -16,12 +21,12 @@
       <header class="topbar"></header>
       <div class="content-wrapper">
         <div class="grid-layout" style="display: grid; grid-template-columns: 400px 1fr; gap: 2rem;">
-          
+
           <!-- Bank Form -->
           <div class="card">
             <h3>Bank Details</h3>
             <p style="color:var(--text-muted); margin-bottom:1.5rem;">Configure company accounts for transactions.</p>
-            
+
             <form id="bank-form">
               <input type="hidden" name="id" id="bank-id">
               <div class="form-group">
@@ -38,20 +43,22 @@
               </div>
               <div class="form-group">
                 <label>Target Sectors</label>
-                <div style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                        <label style="display:flex; align-items:center; gap:8px; font-weight:normal;">
-                            <input type="checkbox" name="sector" value="exchange" style="width:16px;"> Exchange
-                        </label>
-                        <label style="display:flex; align-items:center; gap:8px; font-weight:normal;">
-                            <input type="checkbox" name="sector" value="pharmacy" style="width:16px;"> Pharmacy
-                        </label>
-                        <label style="display:flex; align-items:center; gap:8px; font-weight:normal;">
-                            <input type="checkbox" name="sector" value="construction" style="width:16px;"> Construction
-                        </label>
-                    </div>
+                <div
+                  style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <label style="display:flex; align-items:center; gap:8px; font-weight:normal;">
+                      <input type="checkbox" name="sector" value="exchange" style="width:16px;"> Exchange
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; font-weight:normal;">
+                      <input type="checkbox" name="sector" value="pharmacy" style="width:16px;"> Pharmacy
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; font-weight:normal;">
+                      <input type="checkbox" name="sector" value="construction" style="width:16px;"> Construction
+                    </label>
+                  </div>
                 </div>
-                <small style="color:var(--text-muted); display:block; margin-top:5px;">Check specific sectors or leave empty for all.</small>
+                <small style="color:var(--text-muted); display:block; margin-top:5px;">Check specific sectors or leave
+                  empty for all.</small>
               </div>
               <div style="display:flex; gap:10px; margin-top:20px;">
                 <button class="btn-primary full-width" type="submit" id="submit-btn">Save Account</button>
@@ -63,22 +70,22 @@
           <!-- Banks List -->
           <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-                <h3 style="margin:0">Active Accounts</h3>
-                <div id="no-access" style="display:none; color:var(--danger); font-weight:600;">⚠️ Admin Only</div>
+              <h3 style="margin:0">Active Accounts</h3>
+              <div id="no-access" style="display:none; color:var(--danger); font-weight:600;">⚠️ Admin Only</div>
             </div>
-            
+
             <div class="table-container">
-                <table class="data-table">
-                  <thead>
-                      <tr>
-                          <th>Account Info</th>
-                          <th>Holder</th>
-                          <th>Assignment</th>
-                          <th style="text-align:right">Actions</th>
-                      </tr>
-                  </thead>
-                  <tbody id="banks-body"></tbody>
-                </table>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Account Info</th>
+                    <th>Holder</th>
+                    <th>Assignment</th>
+                    <th style="text-align:right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="banks-body"></tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -91,11 +98,6 @@
   <script src="../assets/js/layout.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const layout = new Layout();
-      layout.ensureLayoutContainers();
-      layout.renderSidebar();
-      layout.renderTopbar();
-
       const user = window.Auth && window.Auth.currentUser;
       if (!user || user.role !== 'admin') {
         document.getElementById('no-access').style.display = 'block';
@@ -114,8 +116,8 @@
         tbody.innerHTML = '';
         banks.forEach(b => {
           const sectors = Array.isArray(b.sectors) ? b.sectors.map(s => {
-              const colors = { exchange: '#4299E1', pharmacy: '#48BB78', construction: '#F6AD55' };
-              return `<span style="background:${colors[s] || '#718096'}; color:white; padding:2px 6px; border-radius:4px; font-size:0.7rem; margin-right:4px;">${s}</span>`;
+            const colors = { exchange: '#4299E1', pharmacy: '#48BB78', construction: '#F6AD55' };
+            return `<span style="background:${colors[s] || '#718096'}; color:white; padding:2px 6px; border-radius:4px; font-size:0.7rem; margin-right:4px;">${s}</span>`;
           }).join('') : (b.sectors || '<span style="color:var(--text-muted)">All Sectors</span>');
 
           const tr = document.createElement('tr');
@@ -143,19 +145,19 @@
         form.querySelectorAll('input[name="sector"]:checked').forEach(cb => sectors.push(cb.value));
 
         const bankObj = {
-            id: hiddenId.value ? parseInt(hiddenId.value) : Date.now(),
-            bank_name: fd.get('bank_name'),
-            account_number: fd.get('account_number'),
-            account_holder: fd.get('account_holder'),
-            sectors: sectors.length > 0 ? sectors : ['exchange', 'pharmacy', 'construction']
+          id: hiddenId.value ? parseInt(hiddenId.value) : Date.now(),
+          bank_name: fd.get('bank_name'),
+          account_number: fd.get('account_number'),
+          account_holder: fd.get('account_holder'),
+          sectors: sectors.length > 0 ? sectors : ['exchange', 'pharmacy', 'construction']
         };
-        
+
         let banks = window.Store.get('bank_accounts') || [];
         if (hiddenId.value) {
-            const idx = banks.findIndex(b => b.id == bankObj.id);
-            if (idx !== -1) banks[idx] = bankObj;
+          const idx = banks.findIndex(b => b.id == bankObj.id);
+          if (idx !== -1) banks[idx] = bankObj;
         } else {
-            banks.push(bankObj);
+          banks.push(bankObj);
         }
 
         window.Store.set('bank_accounts', banks);
@@ -171,26 +173,26 @@
           if (!confirm('Delete this bank account?')) return;
           let banks = window.Store.get('bank_accounts') || [];
           banks = banks.filter(b => b.id !== id);
-          window.Store.set('bank_accounts', banks); 
+          window.Store.set('bank_accounts', banks);
           render();
         } else if (btn.classList.contains('edit-bank')) {
           const banks = window.Store.get('bank_accounts') || [];
           const b = banks.find(x => x.id === id);
           if (!b) return;
-          
+
           hiddenId.value = b.id;
           form.querySelector('[name="bank_name"]').value = b.bank_name;
           form.querySelector('[name="account_number"]').value = b.account_number;
           form.querySelector('[name="account_holder"]').value = b.account_holder;
-          
+
           form.querySelectorAll('input[name="sector"]').forEach(cb => cb.checked = false);
           if (Array.isArray(b.sectors)) {
-              b.sectors.forEach(s => {
-                  const cb = form.querySelector(`input[name="sector"][value="${s}"]`);
-                  if (cb) cb.checked = true;
-              });
+            b.sectors.forEach(s => {
+              const cb = form.querySelector(`input[name="sector"][value="${s}"]`);
+              if (cb) cb.checked = true;
+            });
           }
-          
+
           submitBtn.textContent = 'Update Account';
           cancelBtn.style.display = 'block';
         }
@@ -207,4 +209,5 @@
     });
   </script>
 </body>
+
 </html>

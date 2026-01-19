@@ -65,7 +65,6 @@ const INIT_KEYS = {
   ],
   pharmacy_sales: [],
   construction_expenses: [],
-  construction_expenses: [],
   construction_income: [],
   bank_accounts: [],
   exchange_rates: {

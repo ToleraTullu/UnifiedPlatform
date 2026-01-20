@@ -1,1106 +1,829 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unified Management Platform</title>
-    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/style.css">
     <!-- Using Google Fonts for better aesthetics -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-  </head>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
 
-  <body>
+<body>
+
     <div class="app-container">
-      <!-- Sidebar -->
-      <aside class="sidebar">
-        <div class="brand">
-          <h2>UniManage</h2>
-        </div>
-        <nav class="nav-menu">
-          <ul id="sidebar-menu">
-            <!-- Populated by JS -->
-          </ul>
-        </nav>
-      </aside>
-
-      <!-- Main Content -->
-      <main class="main-content">
-        <!-- Header -->
-        <header class="topbar">
-          <div style="display: flex; align-items: center">
-            <button id="mobileMenuBtn" class="hamburger">☰</button>
-            <h2 id="page-title">Dashboard</h2>
-          </div>
-          <div class="user-info">
-            <button
-              id="notificationBtn"
-              class="theme-toggle"
-              style="position: relative; margin-right: 10px"
-            >
-              🔔
-              <span
-                id="notif-badge"
-                style="
-                  display: none;
-                  position: absolute;
-                  top: -5px;
-                  right: -5px;
-                  background: red;
-                  color: white;
-                  font-size: 0.6rem;
-                  padding: 2px 5px;
-                  border-radius: 50%;
-                "
-                >0</span
-              >
-            </button>
-            <button
-              id="themeToggle"
-              class="theme-toggle"
-              title="Toggle Dark Mode"
-            >
-              🌙
-            </button>
-            <span id="displayUsername" class="username">User</span>
-            <span id="displayRole" class="role-badge">Role</span>
-            <button id="logoutBtn" class="logout-btn">Logout</button>
-          </div>
-        </header>
-
-        <!-- Content Body -->
-        <div class="content-wrapper">
-          <!-- ================= ADMIN OVERVIEW ================= -->
-          <div id="view-admin-overview" class="view-section hidden">
-            <!-- Global Stats Cards -->
-            <div class="dashboard-grid">
-              <div class="card stat-card blue">
-                <div class="icon">💰</div>
-                <div class="info">
-                  <h3>Total Exchange Vol</h3>
-                  <p id="stat-exchange">0</p>
-                </div>
-              </div>
-              <div class="card stat-card green">
-                <div class="icon">💊</div>
-                <div class="info">
-                  <h3>Pharmacy Sales</h3>
-                  <p id="stat-pharmacy">0</p>
-                </div>
-              </div>
-              <div class="card stat-card orange">
-                <div class="icon">🏗️</div>
-                <div class="info">
-                  <h3>Construction Balance</h3>
-                  <p id="stat-construction">0</p>
-                </div>
-              </div>
-              <div class="card stat-card purple">
-                <div class="icon">📊</div>
-                <div class="info">
-                  <h3>Net Platform Profit</h3>
-                  <p id="stat-net-profit">0</p>
-                  <small>Est. from all sectors</small>
-                </div>
-              </div>
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <h2>UniManage</h2>
             </div>
-
-            <div class="grid-layout">
-              <!-- Simple CSS Chart Placeholder -->
-              <div class="card">
-                <h3>Revenue Distribution</h3>
-                <div class="css-chart-container">
-                  <div class="bar-group">
-                    <div
-                      class="bar blue"
-                      style="height: 60%"
-                      title="Exchange"
-                    ></div>
-                    <label>Exchange</label>
-                  </div>
-                  <div class="bar-group">
-                    <div
-                      class="bar green"
-                      style="height: 40%"
-                      title="Pharmacy"
-                    ></div>
-                    <label>Pharmacy</label>
-                  </div>
-                  <div class="bar-group">
-                    <div
-                      class="bar orange"
-                      style="height: 80%"
-                      title="Construction"
-                    ></div>
-                    <label>Construction</label>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Activity Stream -->
-              <div class="card">
-                <h3>Recent Activity</h3>
-                <ul id="activity-stream" class="activity-list">
-                  <!-- Populated by JS -->
-                  <li class="empty-state">No recent activity</li>
+            <nav class="nav-menu">
+                <ul id="sidebar-menu">
+                    <!-- Populated by JS -->
                 </ul>
-              </div>
-            </div>
-          </div>
+            </nav>
+        </aside>
 
-          <!-- ================= ADMIN ANALYTICS ================= -->
-          <div id="view-admin-analytics" class="view-section hidden">
-            <div class="action-bar">
-              <select
-                id="analytics-period"
-                class="form-control"
-                style="margin-right: 1rem"
-              >
-                <option value="7">Last 7 Days</option>
-                <option value="30">Last 30 Days</option>
-                <option value="90">Last 90 Days</option>
-                <option value="365">Last Year</option>
-                <option value="10000">All Time</option>
-              </select>
-              <button id="export-analytics-btn" class="btn-secondary">
-                Export Report
-              </button>
-            </div>
-
-            <!-- Key Metrics -->
-            <div class="dashboard-grid">
-              <div class="card stat-card blue">
-                <div class="icon">💰</div>
-                <div class="info">
-                  <h3>Total Revenue</h3>
-                  <p id="analytics-total-revenue">$0</p>
-                  <small id="analytics-revenue-change"
-                    >+0% from last period</small
-                  >
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="topbar">
+                <div style="display: flex; align-items: center;">
+                    <button id="mobileMenuBtn" class="hamburger">☰</button>
+                    <h2 id="page-title">Dashboard</h2>
                 </div>
-              </div>
-              <div class="card stat-card green">
-                <div class="icon">📈</div>
-                <div class="info">
-                  <h3>Exchange Volume</h3>
-                  <p id="analytics-exchange-volume">$0</p>
-                  <small id="analytics-exchange-change"
-                    >+0% from last period</small
-                  >
-                </div>
-              </div>
-              <div class="card stat-card purple">
-                <div class="icon">💊</div>
-                <div class="info">
-                  <h3>Pharmacy Sales</h3>
-                  <p id="analytics-pharmacy-sales">$0</p>
-                  <small id="analytics-pharmacy-change"
-                    >+0% from last period</small
-                  >
-                </div>
-              </div>
-              <div class="card stat-card orange">
-                <div class="icon">🏗️</div>
-                <div class="info">
-                  <h3>Construction Profit</h3>
-                  <p id="analytics-construction-profit">$0</p>
-                  <small id="analytics-construction-change"
-                    >+0% from last period</small
-                  >
-                </div>
-              </div>
-            </div>
-
-            <!-- Charts Section -->
-            <div class="grid-layout">
-              <!-- Revenue Trend Chart -->
-              <div class="card">
-                <h3>Revenue Trend</h3>
-                <div class="chart-container">
-                  <canvas
-                    id="revenue-trend-chart"
-                    width="400"
-                    height="200"
-                  ></canvas>
-                </div>
-              </div>
-
-              <!-- Module Performance -->
-              <div class="card">
-                <h3>Module Performance</h3>
-                <div class="chart-container">
-                  <canvas
-                    id="module-performance-chart"
-                    width="400"
-                    height="200"
-                  ></canvas>
-                </div>
-              </div>
-            </div>
-
-            <!-- Detailed Analytics -->
-            <div class="grid-layout">
-              <!-- Top Products/Services -->
-              <div class="card">
-                <h3>Top Performing Items</h3>
-                <div id="top-items-list" class="analytics-list">
-                  <div class="empty-state">No data available</div>
-                </div>
-              </div>
-
-              <!-- Transaction Summary -->
-              <div class="card">
-                <h3>Transaction Summary</h3>
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Module</th>
-                      <th>Transactions</th>
-                      <th>Total Amount</th>
-                      <th>Avg Transaction</th>
-                    </tr>
-                  </thead>
-                  <tbody id="transaction-summary-body">
-                    <tr>
-                      <td colspan="4" class="empty-state">Loading...</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Time-based Analysis -->
-            <div class="card">
-              <h3>Detailed Breakdown</h3>
-              <div class="analytics-tabs">
-                <button class="tab-btn active" data-tab="daily">Daily</button>
-                <button class="tab-btn" data-tab="weekly">Weekly</button>
-                <button class="tab-btn" data-tab="monthly">Monthly</button>
-              </div>
-              <div id="detailed-breakdown-content">
-                <div class="empty-state">Select a time period above</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ================= EXCHANGE MODULE ================= -->
-          <!-- 1. Dashboard -->
-          <div id="view-exchange-dashboard" class="view-section hidden">
-            <h3>Exchange Dashboard</h3>
-
-            <div class="action-bar" style="margin-bottom: 2rem">
-              <button class="btn-primary" id="btn-nav-ex-buy">
-                Record Buy (Stock In)
-              </button>
-              <button class="btn-success" id="btn-nav-ex-sell">
-                Record Sell (Stock Out)
-              </button>
-              <button class="btn-secondary" id="btn-nav-ex-holdings">
-                View Holdings
-              </button>
-            </div>
-
-            <div class="dashboard-grid four-col">
-              <div class="card">
-                <h4>USD Buy</h4>
-                <p id="ex-buy-usd">0</p>
-              </div>
-              <div class="card">
-                <h4>USD Sell</h4>
-                <p id="ex-sell-usd">0</p>
-              </div>
-              <div class="card">
-                <h4>EUR Buy</h4>
-                <p id="ex-buy-eur">0</p>
-              </div>
-              <div class="card">
-                <h4>EUR Sell</h4>
-                <p id="ex-sell-eur">0</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- 1b. Holdings View (New) -->
-          <div id="view-exchange-holdings" class="view-section hidden">
-            <h3>Vault Holdings</h3>
-            <div class="dashboard-grid">
-              <div class="card">
-                <h4>USD in Vault</h4>
-                <p id="ex-holdings-usd">0.00</p>
-                <small class="text-muted">Net vs Initial</small>
-              </div>
-              <div class="card">
-                <h4>EUR in Vault</h4>
-                <p id="ex-holdings-eur">0.00</p>
-              </div>
-              <div class="card">
-                <h4>GBP in Vault</h4>
-                <p id="ex-holdings-gbp">0.00</p>
-              </div>
-              <div class="card">
-                <h4>Local Currency Reserve</h4>
-                <p id="ex-holdings-local">0.00</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- 1c. Set Rates View (New) -->
-          <div id="view-exchange-rates" class="view-section hidden">
-            <h3>Exchange Rates Configuration</h3>
-            <div class="form-container card">
-              <form id="exchange-rates-form">
-                <!-- Injected by JS -->
-              </form>
-            </div>
-          </div>
-
-          <!-- 2. Buy Form -->
-          <div id="view-exchange-buy" class="view-section hidden">
-            <div class="form-container card">
-              <h3>Record Currency Purchase (Stock In)</h3>
-              <form id="exchange-buy-form">
-                <!-- Injected by JS or Static -->
-              </form>
-            </div>
-          </div>
-
-          <!-- 3. Sell Form -->
-          <div id="view-exchange-sell" class="view-section hidden">
-            <div class="form-container card">
-              <h3>Record Currency Sale (Stock Out)</h3>
-              <form id="exchange-sell-form">
-                <!-- Injected by JS or Static -->
-              </form>
-            </div>
-          </div>
-
-          <!-- 4. Records -->
-          <div id="view-exchange-records" class="view-section hidden">
-            <h3>Transaction History</h3>
-            <div class="card">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Customer</th>
-                    <th>Currency</th>
-                    <th>Amount</th>
-                    <th>Rate</th>
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody id="exchange-records-body"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- ================= PHARMACY MODULE ================= -->
-          <div id="view-pharmacy-dashboard" class="view-section hidden">
-            <h3>Pharmacy Dashboard</h3>
-            <div class="dashboard-grid">
-              <div class="card">
-                <h4>Today's Sales</h4>
-                <p id="ph-today-sales">0</p>
-              </div>
-              <div class="card">
-                <h4>Credit Sales</h4>
-                <p id="ph-credit-sales">0</p>
-              </div>
-              <div class="card">
-                <h4>Low Stock Items</h4>
-                <p id="ph-low-stock">0</p>
-              </div>
-            </div>
-          </div>
-
-          <div id="view-pharmacy-pos" class="view-section hidden">
-            <!-- POS UI moved here -->
-            <div class="pos-container">
-              <div class="card pos-left">
-                <h3>New Sale</h3>
-                <div class="form-group">
-                  <label>Select Item</label>
-                  <select id="pos-item-select"></select>
-                </div>
-                <div class="form-group">
-                  <label>Quantity</label>
-                  <input type="number" id="pos-qty" value="1" min="1" />
-                </div>
-                <button class="btn-success full-width" id="btn-pos-add">
-                  Add to Cart
-                </button>
-              </div>
-              <div class="card pos-right">
-                <h3>Current Cart</h3>
-                <ul id="pos-cart-list" class="cart-list"></ul>
-                <div class="cart-total">
-                  Total: <span id="pos-total">0.00</span>
-                </div>
-                <button class="btn-primary full-width" id="btn-pos-checkout">
-                  Complete Sale
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div id="view-pharmacy-stock" class="view-section hidden">
-            <div class="action-bar">
-              <button class="btn-primary" id="btn-stock-add">
-                + Add New Item
-              </button>
-            </div>
-            <div class="card">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Sell Price</th>
-                    <th>Qty</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="pharmacy-stock-body"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div id="view-pharmacy-records" class="view-section hidden">
-            <h3>Sales History</h3>
-            <div class="card">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody id="pharmacy-records-body"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- ================= CONSTRUCTION MODULE ================= -->
-          <div id="view-construction-dashboard" class="view-section hidden">
-            <h3>Construction Overview</h3>
-            <div class="dashboard-grid">
-              <div class="card">
-                <h4>Project Balance</h4>
-                <p id="cons-dash-balance">0</p>
-              </div>
-              <div class="card">
-                <h4>Total Expenses</h4>
-                <p id="cons-dash-expense">0</p>
-              </div>
-              <div class="card">
-                <h4>Total Income</h4>
-                <p id="cons-dash-income">0</p>
-              </div>
-              <div class="card">
-                <h4>Outst. Payables</h4>
-                <p id="cons-dash-credit-expense">0</p>
-              </div>
-              <div class="card">
-                <h4>Outst. Receivables</h4>
-                <p id="cons-dash-credit-income">0</p>
-              </div>
-            </div>
-          </div>
-
-          <div id="view-construction-expense" class="view-section hidden">
-            <div class="form-container card">
-              <h3>Log Material / Labor Expense</h3>
-              <form id="construction-expense-form">
-                <div class="form-group">
-                  <label>Project / Site</label>
-                  <select id="exp-site" required></select>
-                </div>
-                <div class="form-group">
-                  <label>Description</label>
-                  <input type="text" id="exp-desc" required />
-                </div>
-                <div class="form-group">
-                  <label>Amount</label>
-                  <input type="number" id="exp-amount" required step="0.01" />
-                </div>
-                <div class="form-group">
-                  <label>Date</label>
-                  <input type="date" id="exp-date" required />
-                </div>
-                <button type="submit" class="btn-danger">Record Expense</button>
-              </form>
-            </div>
-          </div>
-
-          <div id="view-construction-income" class="view-section hidden">
-            <div class="form-container card">
-              <h3>Log Rent / Income</h3>
-              <form id="construction-income-form">
-                <div class="form-group">
-                  <label>Project / Site</label>
-                  <select id="inc-site" required></select>
-                </div>
-                <div class="form-group">
-                  <label>Source / Unit</label>
-                  <input type="text" id="inc-desc" required />
-                </div>
-                <div class="form-group">
-                  <label>Amount</label>
-                  <input type="number" id="inc-amount" required step="0.01" />
-                </div>
-                <div class="form-group">
-                  <label>Date</label>
-                  <input type="date" id="inc-date" required />
-                </div>
-                <button type="submit" class="btn-success">Record Income</button>
-              </form>
-            </div>
-          </div>
-
-          <div id="view-construction-records" class="view-section hidden">
-            <h3>Financial Records</h3>
-            <div class="card">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Description</th>
-                    <th>Amount</th>
-                  </tr>
-                </thead>
-                <tbody id="construction-records-body"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div id="view-construction-sites" class="view-section hidden">
-            <h3>Manage Sites</h3>
-            <div class="action-bar">
-              <button class="btn-primary" id="btn-site-add">
-                + Add New Site
-              </button>
-            </div>
-            <div class="dashboard-grid">
-              <div class="card" style="grid-column: 1 / -1">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Site Name</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="construction-sites-body"></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- ================= ADMIN MANAGEMENT ================= -->
-          <!-- 0. Reports & Analytics -->
-          <div id="view-admin-analytics" class="view-section hidden">
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 2rem;
-              "
-            >
-              <h2 style="margin: 0">Platform Performance & Analytics</h2>
-              <div style="display: flex; gap: 12px; align-items: center">
-                <select
-                  id="analytics-period"
-                  class="form-control"
-                  style="width: 180px"
-                >
-                  <option value="7">Last 7 Days</option>
-                  <option value="30" selected>Last 30 Days</option>
-                  <option value="90">Last 90 Days</option>
-                  <option value="365">Last Year</option>
-                  <option value="10000">All Time</option>
-                </select>
-                <button id="export-analytics-btn" class="btn-primary">
-                  Export Report
-                </button>
-              </div>
-            </div>
-
-            <!-- KPI Grid -->
-            <div class="dashboard-grid four-col">
-              <div class="card stat-card blue">
-                <div class="stat-label">Total Platform Revenue</div>
-                <div class="stat-value" id="analytics-total-revenue">$0.00</div>
-                <div
-                  class="stat-change"
-                  id="analytics-total-revenue-change"
-                  style="font-size: 0.8rem; margin-top: 5px"
-                >
-                  Loading...
-                </div>
-              </div>
-              <div class="card stat-card blue">
-                <div class="stat-label">Exchange Volume</div>
-                <div class="stat-value" id="analytics-exchange-volume">
-                  $0.00
-                </div>
-                <div
-                  class="stat-change"
-                  id="analytics-exchange-volume-change"
-                  style="font-size: 0.8rem; margin-top: 5px"
-                >
-                  Loading...
-                </div>
-              </div>
-              <div class="card stat-card green">
-                <div class="stat-label">Pharmacy Sales</div>
-                <div class="stat-value" id="analytics-pharmacy-sales">
-                  $0.00
-                </div>
-                <div
-                  class="stat-change"
-                  id="analytics-pharmacy-sales-change"
-                  style="font-size: 0.8rem; margin-top: 5px"
-                >
-                  Loading...
-                </div>
-              </div>
-              <div class="card stat-card orange">
-                <div class="stat-label">Construction Balance</div>
-                <div class="stat-value" id="analytics-construction-profit">
-                  $0.00
-                </div>
-                <div
-                  class="stat-change"
-                  id="analytics-construction-profit-change"
-                  style="font-size: 0.8rem; margin-top: 5px"
-                >
-                  Loading...
-                </div>
-              </div>
-            </div>
-
-            <!-- Charts Row -->
-            <div
-              class="grid-layout"
-              style="grid-template-columns: 2fr 1fr; margin-top: 2rem"
-            >
-              <div class="card">
-                <h3>Revenue Trend</h3>
-                <div style="height: 350px; position: relative">
-                  <canvas id="revenue-trend-chart"></canvas>
-                </div>
-              </div>
-              <div class="card">
-                <h3>Sector Performance</h3>
-                <div style="height: 350px; position: relative">
-                  <canvas id="module-performance-chart"></canvas>
-                </div>
-              </div>
-            </div>
-
-            <!-- Detailed Breakdown -->
-            <div
-              class="grid-layout"
-              style="grid-template-columns: 1fr 2fr; margin-top: 2rem"
-            >
-              <div class="card">
-                <h3>Top Performers</h3>
-                <div
-                  id="top-items-list"
-                  class="activity-stream"
-                  style="max-height: 400px; overflow-y: auto"
-                >
-                  <!-- Top items loaded via JS -->
-                </div>
-              </div>
-              <div class="card">
-                <h3>Transaction Summary</h3>
-                <div class="table-container">
-                  <table class="data-table">
-                    <thead>
-                      <tr>
-                        <th>Module</th>
-                        <th>Tx Count</th>
-                        <th>Volume</th>
-                        <th>Avg. Value</th>
-                      </tr>
-                    </thead>
-                    <tbody id="transaction-summary-body">
-                      <!-- Data loaded via JS -->
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 1. User Management -->
-          <div id="view-admin-users" class="view-section hidden">
-            <div class="grid-layout">
-              <!-- Create/Edit Form -->
-              <div class="card">
-                <h3>User Profile</h3>
-                <p style="color: var(--text-muted); margin-bottom: 1.5rem">
-                  Configure system access and roles.
-                </p>
-                <form id="user-form">
-                  <input type="hidden" id="edit-mode" value="" />
-                  <div class="form-group">
-                    <label>Username</label>
-                    <input
-                      name="username"
-                      id="u-username"
-                      class="form-control"
-                      required
-                      placeholder="User unique ID"
-                    />
-                  </div>
-                  <div class="form-group" id="pass-group">
-                    <label>Password</label>
-                    <input
-                      name="password"
-                      id="u-password"
-                      type="password"
-                      class="form-control"
-                      required
-                      placeholder="••••••••"
-                    />
-                  </div>
-                  <div class="form-group">
-                    <label>Full Name</label>
-                    <input
-                      name="name"
-                      id="u-name"
-                      class="form-control"
-                      placeholder="John Doe"
-                    />
-                  </div>
-                  <div class="form-group">
-                    <label>Role / Assignment</label>
-                    <select name="role" id="u-role" class="form-control">
-                      <option value="admin">Global Admin</option>
-                      <option value="exchange_user">Exchange Operator</option>
-                      <option value="pharmacy_user">Pharmacy Operator</option>
-                      <option value="construction_user">
-                        Construction Manager
-                      </option>
-                    </select>
-                  </div>
-                  <div style="display: flex; gap: 10px; margin-top: 20px">
-                    <button
-                      class="btn-primary full-width"
-                      type="submit"
-                      id="submit-btn-user"
-                    >
-                      Create User
+                <div class="user-info">
+                    <button id="notificationBtn" class="theme-toggle" style="position:relative; margin-right:10px;">
+                        🔔 <span id="notif-badge"
+                            style="display:none; position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:0.6rem; padding:2px 5px; border-radius:50%;">0</span>
                     </button>
-                    <button
-                      class="btn-secondary"
-                      type="button"
-                      id="cancel-btn-user"
-                      style="display: none"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              <!-- Users List -->
-              <div class="card">
-                <div
-                  style="
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 1.5rem;
-                  "
-                >
-                  <h3 style="margin: 0">Active Users</h3>
-                  <div
-                    id="no-access-users"
-                    style="
-                      display: none;
-                      color: var(--danger);
-                      font-size: 0.9rem;
-                      font-weight: 600;
-                    "
-                  >
-                    ⚠️ Admin Only
-                  </div>
+                    <button id="themeToggle" class="theme-toggle" title="Toggle Dark Mode">🌙</button>
+                    <span id="displayUsername" class="username">User</span>
+                    <span id="displayRole" class="role-badge">Role</span>
+                    <button id="logoutBtn" class="logout-btn">Logout</button>
                 </div>
-                <div class="table-container">
-                  <table class="data-table">
-                    <thead>
-                      <tr>
-                        <th>User Details</th>
-                        <th>System Role</th>
-                        <th style="text-align: right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody id="users-body"></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
+            </header>
 
-          <!-- 2. Bank Management -->
-          <div id="view-admin-banks" class="view-section hidden">
-            <div class="grid-layout" style="grid-template-columns: 400px 1fr">
-              <!-- Bank Form -->
-              <div class="card">
-                <h3>Bank Details</h3>
-                <p style="color: var(--text-muted); margin-bottom: 1.5rem">
-                  Configure company accounts for transactions.
-                </p>
-                <form id="bank-form">
-                  <input type="hidden" name="id" id="bank-id" />
-                  <div class="form-group">
-                    <label>Bank Name</label>
-                    <input
-                      name="bank_name"
-                      class="form-control"
-                      required
-                      placeholder="e.g. Chase Bank"
-                    />
-                  </div>
-                  <div class="form-group">
-                    <label>Account Number</label>
-                    <input
-                      name="account_number"
-                      class="form-control"
-                      required
-                      placeholder="Account Number"
-                    />
-                  </div>
-                  <div class="form-group">
-                    <label>Account Holder</label>
-                    <input
-                      name="account_holder"
-                      class="form-control"
-                      required
-                      placeholder="Organization Name"
-                    />
-                  </div>
-                  <div class="form-group">
-                    <label>Target Sectors</label>
-                    <div
-                      style="
-                        background: var(--bg-input);
-                        padding: 12px;
-                        border-radius: 8px;
-                        border: 1px solid var(--border-color);
-                      "
-                    >
-                      <div
-                        style="
-                          display: grid;
-                          grid-template-columns: 1fr 1fr;
-                          gap: 8px;
-                        "
-                      >
-                        <label
-                          style="
-                            display: flex;
-                            align-items: center;
-                            gap: 8px;
-                            font-weight: normal;
-                          "
-                        >
-                          <input
-                            type="checkbox"
-                            name="sector"
-                            value="exchange"
-                            style="width: 16px"
-                          />
-                          Exchange
-                        </label>
-                        <label
-                          style="
-                            display: flex;
-                            align-items: center;
-                            gap: 8px;
-                            font-weight: normal;
-                          "
-                        >
-                          <input
-                            type="checkbox"
-                            name="sector"
-                            value="pharmacy"
-                            style="width: 16px"
-                          />
-                          Pharmacy
-                        </label>
-                        <label
-                          style="
-                            display: flex;
-                            align-items: center;
-                            gap: 8px;
-                            font-weight: normal;
-                          "
-                        >
-                          <input
-                            type="checkbox"
-                            name="sector"
-                            value="construction"
-                            style="width: 16px"
-                          />
-                          Construction
-                        </label>
-                      </div>
+            <!-- Content Body -->
+            <div class="content-wrapper">
+
+                <!-- ================= ADMIN OVERVIEW ================= -->
+                <div id="view-admin-overview" class="view-section hidden">
+
+                    <!-- Global Stats Cards -->
+                    <div class="dashboard-grid">
+                        <div class="card stat-card blue">
+                            <div class="icon">💰</div>
+                            <div class="info">
+                                <h3>Total Exchange Vol</h3>
+                                <p id="stat-exchange">0</p>
+                            </div>
+                        </div>
+                        <div class="card stat-card green">
+                            <div class="icon">💊</div>
+                            <div class="info">
+                                <h3>Pharmacy Sales</h3>
+                                <p id="stat-pharmacy">0</p>
+                            </div>
+                        </div>
+                        <div class="card stat-card orange">
+                            <div class="icon">🏗️</div>
+                            <div class="info">
+                                <h3>Construction Balance</h3>
+                                <p id="stat-construction">0</p>
+                            </div>
+                        </div>
+                        <div class="card stat-card purple">
+                            <div class="icon">📊</div>
+                            <div class="info">
+                                <h3>Net Platform Profit</h3>
+                                <p id="stat-net-profit">0</p>
+                                <small>Est. from all sectors</small>
+                            </div>
+                        </div>
                     </div>
-                    <small
-                      style="
-                        color: var(--text-muted);
-                        display: block;
-                        margin-top: 5px;
-                      "
-                      >Check specific sectors or leave empty for all.</small
-                    >
-                  </div>
-                  <div style="display: flex; gap: 10px; margin-top: 20px">
-                    <button
-                      class="btn-primary full-width"
-                      type="submit"
-                      id="submit-btn-bank"
-                    >
-                      Save Account
-                    </button>
-                    <button
-                      class="btn-secondary"
-                      type="button"
-                      id="cancel-btn-bank"
-                      style="display: none"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
 
-              <!-- Banks List -->
-              <div class="card">
-                <div
-                  style="
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 1.5rem;
-                  "
-                >
-                  <h3 style="margin: 0">Active Accounts</h3>
-                  <div
-                    id="no-access-banks"
-                    style="
-                      display: none;
-                      color: var(--danger);
-                      font-weight: 600;
-                    "
-                  >
-                    ⚠️ Admin Only
-                  </div>
-                </div>
-                <div class="table-container">
-                  <table class="data-table">
-                    <thead>
-                      <tr>
-                        <th>Account Info</th>
-                        <th>Holder</th>
-                        <th>Assignment</th>
-                        <th style="text-align: right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody id="banks-body"></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
+                    <div class="grid-layout">
+                        <!-- Simple CSS Chart Placeholder -->
+                        <div class="card">
+                            <h3>Revenue Distribution</h3>
+                            <div class="css-chart-container">
+                                <div class="bar-group">
+                                    <div class="bar blue" style="height: 60%" title="Exchange"></div>
+                                    <label>Exchange</label>
+                                </div>
+                                <div class="bar-group">
+                                    <div class="bar green" style="height: 40%" title="Pharmacy"></div>
+                                    <label>Pharmacy</label>
+                                </div>
+                                <div class="bar-group">
+                                    <div class="bar orange" style="height: 80%" title="Construction"></div>
+                                    <label>Construction</label>
+                                </div>
+                            </div>
+                        </div>
 
-          <!-- 3. System Logs -->
-          <div id="view-admin-logs" class="view-section hidden">
-            <div class="card">
-              <div
-                class="card-header"
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  margin-bottom: 1.5rem;
-                "
-              >
-                <h3 style="margin: 0">System Activity Logs</h3>
-                <div>
-                  <button id="refreshLogs" class="btn-primary">
-                    Refresh Logs
-                  </button>
-                  <button id="clearLogs" class="btn-danger">Clear All</button>
+                        <!-- Activity Stream -->
+                        <div class="card">
+                            <h3>Recent Activity</h3>
+                            <ul id="activity-stream" class="activity-list">
+                                <!-- Populated by JS -->
+                                <li class="empty-state">No recent activity</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-              </div>
-              <div class="table-container">
-                <table class="data-table" id="logsTable">
-                  <thead>
-                    <tr>
-                      <th>Timestamp</th>
-                      <th>User</th>
-                      <th>Action</th>
-                      <th>Module</th>
-                      <th>Details</th>
-                    </tr>
-                  </thead>
-                  <tbody id="logsTableBody">
-                    <tr>
-                      <td colspan="5" class="empty-state">
-                        No activity logs found
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+
+                <!-- ================= ADMIN ANALYTICS ================= -->
+                <div id="view-admin-analytics" class="view-section hidden">
+                    <div class="action-bar">
+                        <select id="analytics-period" class="form-control" style="margin-right: 1rem;">
+                            <option value="7">Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                            <option value="365">Last Year</option>
+                        </select>
+                        <button id="export-analytics-btn" class="btn-secondary">Export Report</button>
+                    </div>
+
+                    <!-- Key Metrics -->
+                    <div class="dashboard-grid">
+                        <div class="card stat-card blue">
+                            <div class="icon">💰</div>
+                            <div class="info">
+                                <h3>Total Revenue</h3>
+                                <p id="analytics-total-revenue">$0</p>
+                                <small id="analytics-revenue-change">+0% from last period</small>
+                            </div>
+                        </div>
+                        <div class="card stat-card green">
+                            <div class="icon">📈</div>
+                            <div class="info">
+                                <h3>Exchange Volume</h3>
+                                <p id="analytics-exchange-volume">$0</p>
+                                <small id="analytics-exchange-change">+0% from last period</small>
+                            </div>
+                        </div>
+                        <div class="card stat-card purple">
+                            <div class="icon">💊</div>
+                            <div class="info">
+                                <h3>Pharmacy Sales</h3>
+                                <p id="analytics-pharmacy-sales">$0</p>
+                                <small id="analytics-pharmacy-change">+0% from last period</small>
+                            </div>
+                        </div>
+                        <div class="card stat-card orange">
+                            <div class="icon">🏗️</div>
+                            <div class="info">
+                                <h3>Construction Profit</h3>
+                                <p id="analytics-construction-profit">$0</p>
+                                <small id="analytics-construction-change">+0% from last period</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Section -->
+                    <div class="grid-layout">
+                        <!-- Revenue Trend Chart -->
+                        <div class="card">
+                            <h3>Revenue Trend</h3>
+                            <div class="chart-container">
+                                <canvas id="revenue-trend-chart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Module Performance -->
+                        <div class="card">
+                            <h3>Module Performance</h3>
+                            <div class="chart-container">
+                                <canvas id="module-performance-chart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Analytics -->
+                    <div class="grid-layout">
+                        <!-- Top Products/Services -->
+                        <div class="card">
+                            <h3>Top Performing Items</h3>
+                            <div id="top-items-list" class="analytics-list">
+                                <div class="empty-state">No data available</div>
+                            </div>
+                        </div>
+
+                        <!-- Transaction Summary -->
+                        <div class="card">
+                            <h3>Transaction Summary</h3>
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Module</th>
+                                        <th>Transactions</th>
+                                        <th>Total Amount</th>
+                                        <th>Avg Transaction</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transaction-summary-body">
+                                    <tr>
+                                        <td colspan="4" class="empty-state">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Time-based Analysis -->
+                    <div class="card">
+                        <h3>Detailed Breakdown</h3>
+                        <div class="analytics-tabs">
+                            <button class="tab-btn active" data-tab="daily">Daily</button>
+                            <button class="tab-btn" data-tab="weekly">Weekly</button>
+                            <button class="tab-btn" data-tab="monthly">Monthly</button>
+                        </div>
+                        <div id="detailed-breakdown-content">
+                            <div class="empty-state">Select a time period above</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= EXCHANGE MODULE ================= -->
+                <!-- 1. Dashboard -->
+                <div id="view-exchange-dashboard" class="view-section hidden">
+                    <h3>Exchange Dashboard</h3>
+
+                    <div class="action-bar" style="margin-bottom: 2rem;">
+                        <button class="btn-primary" id="btn-nav-ex-buy">Record Buy (Stock In)</button>
+                        <button class="btn-success" id="btn-nav-ex-sell">Record Sell (Stock Out)</button>
+                        <button class="btn-secondary" id="btn-nav-ex-holdings">View Holdings</button>
+                    </div>
+
+                    <div class="dashboard-grid four-col">
+                        <div class="card">
+                            <h4>USD Buy</h4>
+                            <p id="ex-buy-usd">0</p>
+                        </div>
+                        <div class="card">
+                            <h4>USD Sell</h4>
+                            <p id="ex-sell-usd">0</p>
+                        </div>
+                        <div class="card">
+                            <h4>EUR Buy</h4>
+                            <p id="ex-buy-eur">0</p>
+                        </div>
+                        <div class="card">
+                            <h4>EUR Sell</h4>
+                            <p id="ex-sell-eur">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1b. Holdings View (New) -->
+                <div id="view-exchange-holdings" class="view-section hidden">
+                    <h3>Vault Holdings</h3>
+                    <div class="dashboard-grid">
+                        <div class="card">
+                            <h4>USD in Vault</h4>
+                            <p id="ex-holdings-usd">0.00</p>
+                            <small class="text-muted">Net vs Initial</small>
+                        </div>
+                        <div class="card">
+                            <h4>EUR in Vault</h4>
+                            <p id="ex-holdings-eur">0.00</p>
+                        </div>
+                        <div class="card">
+                            <h4>GBP in Vault</h4>
+                            <p id="ex-holdings-gbp">0.00</p>
+                        </div>
+                        <div class="card">
+                            <h4>Local Currency Reserve</h4>
+                            <p id="ex-holdings-local">0.00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1c. Set Rates View (New) -->
+                <div id="view-exchange-rates" class="view-section hidden">
+                    <h3>Exchange Rates Configuration</h3>
+                    <div class="form-container card">
+                        <form id="exchange-rates-form">
+                            <!-- Injected by JS -->
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 2. Buy Form -->
+                <div id="view-exchange-buy" class="view-section hidden">
+                    <div class="form-container card">
+                        <h3>Record Currency Purchase (Stock In)</h3>
+                        <form id="exchange-buy-form">
+                            <!-- Injected by JS or Static -->
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 3. Sell Form -->
+                <div id="view-exchange-sell" class="view-section hidden">
+                    <div class="form-container card">
+                        <h3>Record Currency Sale (Stock Out)</h3>
+                        <form id="exchange-sell-form">
+                            <!-- Injected by JS or Static -->
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 4. Records -->
+                <div id="view-exchange-records" class="view-section hidden">
+                    <h3>Transaction History</h3>
+                    <div class="card">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Customer</th>
+                                    <th>Currency</th>
+                                    <th>Amount</th>
+                                    <th>Rate</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="exchange-records-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+
+                <!-- ================= PHARMACY MODULE ================= -->
+                <div id="view-pharmacy-dashboard" class="view-section hidden">
+                    <h3>Pharmacy Dashboard</h3>
+                    <div class="dashboard-grid">
+                        <div class="card">
+                            <h4>Today's Sales</h4>
+                            <p id="ph-today-sales">0</p>
+                        </div>
+                        <div class="card">
+                            <h4>Credit Sales</h4>
+                            <p id="ph-credit-sales">0</p>
+                        </div>
+                        <div class="card">
+                            <h4>Low Stock Items</h4>
+                            <p id="ph-low-stock">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-pharmacy-pos" class="view-section hidden">
+                    <!-- POS UI moved here -->
+                    <div class="pos-container">
+                        <div class="card pos-left">
+                            <h3>New Sale</h3>
+                            <div class="form-group">
+                                <label>Select Item</label>
+                                <select id="pos-item-select"></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Quantity</label>
+                                <input type="number" id="pos-qty" value="1" min="1">
+                            </div>
+                            <button class="btn-success full-width" id="btn-pos-add">Add to Cart</button>
+                        </div>
+                        <div class="card pos-right">
+                            <h3>Current Cart</h3>
+                            <ul id="pos-cart-list" class="cart-list"></ul>
+                            <div class="cart-total">Total: <span id="pos-total">0.00</span></div>
+                            <button class="btn-primary full-width" id="btn-pos-checkout">Complete Sale</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-pharmacy-stock" class="view-section hidden">
+                    <div class="action-bar">
+                        <button class="btn-primary" id="btn-stock-add">+ Add New Item</button>
+                    </div>
+                    <div class="card">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Sell Price</th>
+                                    <th>Qty</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pharmacy-stock-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="view-pharmacy-records" class="view-section hidden">
+                    <h3>Sales History</h3>
+                    <div class="card">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Items</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pharmacy-records-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ================= CONSTRUCTION MODULE ================= -->
+                <div id="view-construction-dashboard" class="view-section hidden">
+                    <h3>Construction Overview</h3>
+                    <div class="dashboard-grid">
+                        <div class="card">
+                            <h4>Project Balance</h4>
+                            <p id="cons-dash-balance">0</p>
+                        </div>
+                        <div class="card">
+                            <h4>Total Expenses</h4>
+                            <p id="cons-dash-expense">0</p>
+                        </div>
+                        <div class="card">
+                            <h4>Total Income</h4>
+                            <p id="cons-dash-income">0</p>
+                        </div>
+                        <div class="card">
+                            <h4>Outst. Payables</h4>
+                            <p id="cons-dash-credit-expense">0</p>
+                        </div>
+                        <div class="card">
+                            <h4>Outst. Receivables</h4>
+                            <p id="cons-dash-credit-income">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-construction-expense" class="view-section hidden">
+                    <div class="form-container card">
+                        <h3>Log Material / Labor Expense</h3>
+                        <form id="construction-expense-form">
+                            <div class="form-group">
+                                <label>Project / Site</label>
+                                <select id="exp-site" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Description</label>
+                                <input type="text" id="exp-desc" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Amount</label>
+                                <input type="number" id="exp-amount" required step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>Date</label>
+                                <input type="date" id="exp-date" required>
+                            </div>
+                            <button type="submit" class="btn-danger">Record Expense</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="view-construction-income" class="view-section hidden">
+                    <div class="form-container card">
+                        <h3>Log Rent / Income</h3>
+                        <form id="construction-income-form">
+                            <div class="form-group">
+                                <label>Project / Site</label>
+                                <select id="inc-site" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Source / Unit</label>
+                                <input type="text" id="inc-desc" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Amount</label>
+                                <input type="number" id="inc-amount" required step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>Date</label>
+                                <input type="date" id="inc-date" required>
+                            </div>
+                            <button type="submit" class="btn-success">Record Income</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="view-construction-records" class="view-section hidden">
+                    <h3>Financial Records</h3>
+                    <div class="card">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="construction-records-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="view-construction-sites" class="view-section hidden">
+                    <h3>Manage Sites</h3>
+                    <div class="action-bar">
+                        <button class="btn-primary" id="btn-site-add">+ Add New Site</button>
+                    </div>
+                    <div class="dashboard-grid">
+                        <div class="card" style="grid-column: 1 / -1;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Site Name</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="construction-sites-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= ADMIN MANAGEMENT ================= -->
+                <!-- 0. Reports & Analytics -->
+                <div id="view-admin-analytics" class="view-section hidden">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+                        <h2 style="margin:0">Platform Performance & Analytics</h2>
+                        <div style="display:flex; gap:12px; align-items:center;">
+                            <select id="analytics-period" class="form-control" style="width:180px;">
+                                <option value="7">Last 7 Days</option>
+                                <option value="30" selected>Last 30 Days</option>
+                                <option value="90">Last 90 Days</option>
+                                <option value="365">Last Year</option>
+                            </select>
+                            <button id="export-analytics-btn" class="btn-primary">Export Report</button>
+                        </div>
+                    </div>
+
+                    <!-- KPI Grid -->
+                    <div class="dashboard-grid four-col">
+                        <div class="card stat-card blue">
+                            <div class="stat-label">Total Platform Revenue</div>
+                            <div class="stat-value" id="analytics-total-revenue">$0.00</div>
+                            <div class="stat-change" id="analytics-total-revenue-change"
+                                style="font-size:0.8rem; margin-top:5px;">Loading...</div>
+                        </div>
+                        <div class="card stat-card blue">
+                            <div class="stat-label">Exchange Volume</div>
+                            <div class="stat-value" id="analytics-exchange-volume">$0.00</div>
+                            <div class="stat-change" id="analytics-exchange-volume-change"
+                                style="font-size:0.8rem; margin-top:5px;">Loading...</div>
+                        </div>
+                        <div class="card stat-card green">
+                            <div class="stat-label">Pharmacy Sales</div>
+                            <div class="stat-value" id="analytics-pharmacy-sales">$0.00</div>
+                            <div class="stat-change" id="analytics-pharmacy-sales-change"
+                                style="font-size:0.8rem; margin-top:5px;">Loading...</div>
+                        </div>
+                        <div class="card stat-card orange">
+                            <div class="stat-label">Construction Balance</div>
+                            <div class="stat-value" id="analytics-construction-profit">$0.00</div>
+                            <div class="stat-change" id="analytics-construction-profit-change"
+                                style="font-size:0.8rem; margin-top:5px;">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="grid-layout" style="grid-template-columns: 2fr 1fr; margin-top:2rem;">
+                        <div class="card">
+                            <h3>Revenue Trend</h3>
+                            <div style="height:350px; position:relative;">
+                                <canvas id="revenue-trend-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3>Sector Performance</h3>
+                            <div style="height:350px; position:relative;">
+                                <canvas id="module-performance-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Breakdown -->
+                    <div class="grid-layout" style="grid-template-columns: 1fr 2fr; margin-top:2rem;">
+                        <div class="card">
+                            <h3>Top Performers</h3>
+                            <div id="top-items-list" class="activity-stream" style="max-height:400px; overflow-y:auto;">
+                                <!-- Top items loaded via JS -->
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3>Transaction Summary</h3>
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Module</th>
+                                            <th>Tx Count</th>
+                                            <th>Volume</th>
+                                            <th>Avg. Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="transaction-summary-body">
+                                        <!-- Data loaded via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1. User Management -->
+                <div id="view-admin-users" class="view-section hidden">
+                    <div class="grid-layout">
+                        <!-- Create/Edit Form -->
+                        <div class="card">
+                            <h3>User Profile</h3>
+                            <p style="color:var(--text-muted); margin-bottom:1.5rem;">Configure system access and roles.
+                            </p>
+                            <form id="user-form">
+                                <input type="hidden" id="edit-mode" value="">
+                                <div class="form-group">
+                                    <label>Username</label>
+                                    <input name="username" id="u-username" class="form-control" required
+                                        placeholder="User unique ID" />
+                                </div>
+                                <div class="form-group" id="pass-group">
+                                    <label>Password</label>
+                                    <input name="password" id="u-password" type="password" class="form-control" required
+                                        placeholder="••••••••" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Full Name</label>
+                                    <input name="name" id="u-name" class="form-control" placeholder="John Doe" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Role / Assignment</label>
+                                    <select name="role" id="u-role" class="form-control">
+                                        <option value="admin">Global Admin</option>
+                                        <option value="exchange_user">Exchange Operator</option>
+                                        <option value="pharmacy_user">Pharmacy Operator</option>
+                                        <option value="construction_user">Construction Manager</option>
+                                    </select>
+                                </div>
+                                <div style="display:flex; gap:10px; margin-top:20px;">
+                                    <button class="btn-primary full-width" type="submit" id="submit-btn-user">Create
+                                        User</button>
+                                    <button class="btn-secondary" type="button" id="cancel-btn-user"
+                                        style="display:none;">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Users List -->
+                        <div class="card">
+                            <div
+                                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                                <h3 style="margin:0">Active Users</h3>
+                                <div id="no-access-users"
+                                    style="display:none; color:var(--danger); font-size:0.9rem; font-weight:600;">⚠️
+                                    Admin Only</div>
+                            </div>
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>User Details</th>
+                                            <th>System Role</th>
+                                            <th style="text-align:right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="users-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Bank Management -->
+                <div id="view-admin-banks" class="view-section hidden">
+                    <div class="grid-layout" style="grid-template-columns: 400px 1fr;">
+                        <!-- Bank Form -->
+                        <div class="card">
+                            <h3>Bank Details</h3>
+                            <p style="color:var(--text-muted); margin-bottom:1.5rem;">Configure company accounts for
+                                transactions.</p>
+                            <form id="bank-form">
+                                <input type="hidden" name="id" id="bank-id">
+                                <div class="form-group">
+                                    <label>Bank Name</label>
+                                    <input name="bank_name" class="form-control" required
+                                        placeholder="e.g. Chase Bank" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Account Number</label>
+                                    <input name="account_number" class="form-control" required
+                                        placeholder="Account Number" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Account Holder</label>
+                                    <input name="account_holder" class="form-control" required
+                                        placeholder="Organization Name" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Target Sectors</label>
+                                    <div
+                                        style="background:var(--bg-input); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+                                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                            <label
+                                                style="display:flex; align-items:center; gap:8px; font-weight:normal;">
+                                                <input type="checkbox" name="sector" value="exchange"
+                                                    style="width:16px;"> Exchange
+                                            </label>
+                                            <label
+                                                style="display:flex; align-items:center; gap:8px; font-weight:normal;">
+                                                <input type="checkbox" name="sector" value="pharmacy"
+                                                    style="width:16px;"> Pharmacy
+                                            </label>
+                                            <label
+                                                style="display:flex; align-items:center; gap:8px; font-weight:normal;">
+                                                <input type="checkbox" name="sector" value="construction"
+                                                    style="width:16px;"> Construction
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <small style="color:var(--text-muted); display:block; margin-top:5px;">Check
+                                        specific sectors or leave empty for all.</small>
+                                </div>
+                                <div style="display:flex; gap:10px; margin-top:20px;">
+                                    <button class="btn-primary full-width" type="submit" id="submit-btn-bank">Save
+                                        Account</button>
+                                    <button class="btn-secondary" type="button" id="cancel-btn-bank"
+                                        style="display:none;">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Banks List -->
+                        <div class="card">
+                            <div
+                                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                                <h3 style="margin:0">Active Accounts</h3>
+                                <div id="no-access-banks" style="display:none; color:var(--danger); font-weight:600;">⚠️
+                                    Admin Only</div>
+                            </div>
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Account Info</th>
+                                            <th>Holder</th>
+                                            <th>Assignment</th>
+                                            <th style="text-align:right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="banks-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. System Logs -->
+                <div id="view-admin-logs" class="view-section hidden">
+                    <div class="card">
+                        <div class="card-header"
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                            <h3 style="margin:0">System Activity Logs</h3>
+                            <div>
+                                <button id="refreshLogs" class="btn-primary">Refresh Logs</button>
+                                <button id="clearLogs" class="btn-danger">Clear All</button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table" id="logsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>User</th>
+                                        <th>Action</th>
+                                        <th>Module</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logsTableBody">
+                                    <tr>
+                                        <td colspan="5" class="empty-state">No activity logs found</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
             </div>
-          </div>
-        </div>
-      </main>
+        </main>
     </div>
 
     <!-- Generic Modal for edits only -->
     <div id="modal-container" class="modal hidden">
-      <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <h2 id="modal-title">Title</h2>
-        <div id="modal-body"></div>
-      </div>
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="modal-title">Title</h2>
+            <div id="modal-body"></div>
+        </div>
     </div>
 
     <!-- Notification Modal -->
     <div id="notification-modal" class="modal hidden">
-      <div class="modal-content">
-        <span
-          class="close-notif-modal"
-          style="
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            cursor: pointer;
-            font-size: 1.5rem;
-          "
-          >&times;</span
-        >
-        <h2>Notifications</h2>
-        <ul
-          id="notification-list"
-          style="list-style: none; padding: 0; margin-top: 1rem"
-        >
-          <li class="empty-state">No new notifications</li>
-        </ul>
-      </div>
+        <div class="modal-content">
+            <span class="close-notif-modal"
+                style="position:absolute; top:1rem; right:1rem; cursor:pointer; font-size:1.5rem;">&times;</span>
+            <h2>Notifications</h2>
+            <ul id="notification-list" style="list-style:none; padding:0; margin-top:1rem;">
+                <li class="empty-state">No new notifications</li>
+            </ul>
+        </div>
     </div>
 
     <script src="js/store.js"></script>
@@ -1111,5 +834,6 @@
     <script src="js/pharmacy.js"></script>
     <script src="js/construction.js"></script>
     <script src="js/admin.js"></script>
-  </body>
+</body>
+
 </html>

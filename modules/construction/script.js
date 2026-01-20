@@ -10,8 +10,8 @@ class ConstructionModule {
     async initDashboard() {
         const expenses = await window.Store.get(this.expenseKey) || [];
         const incomes = await window.Store.get(this.incomeKey) || [];
-        const totExp = expenses.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
-        const totInc = incomes.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
+        const totExp = expenses.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
+        const totInc = incomes.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
 
         document.getElementById('cons-dash-expense').textContent = totExp.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
         document.getElementById('cons-dash-income').textContent = totInc.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
@@ -22,12 +22,12 @@ class ConstructionModule {
         expenses.forEach(exp => {
             const proj = exp.project || 'Unassigned';
             if (!projectStats[proj]) projectStats[proj] = { exp: 0, inc: 0 };
-            projectStats[proj].exp += exp.amount;
+            projectStats[proj].exp += (parseFloat(exp.amount) || 0);
         });
         incomes.forEach(inc => {
             const proj = inc.project || 'Unassigned';
             if (!projectStats[proj]) projectStats[proj] = { exp: 0, inc: 0 };
-            projectStats[proj].inc += inc.amount;
+            projectStats[proj].inc += (parseFloat(inc.amount) || 0);
         });
 
         const breakdownDiv = document.getElementById('projects-breakdown');
@@ -243,8 +243,9 @@ class ConstructionModule {
             const filtered = selectedProject ? all.filter(tx => tx.project === selectedProject) : [];
             filtered.forEach(tx => {
                 const color = tx.cat === 'income' ? 'green' : 'red';
+                const amt = parseFloat(tx.amount) || 0;
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${new Date(tx.date).toLocaleDateString()}</td><td><span style="color:${color};font-weight:bold">${tx.cat.toUpperCase()}</span></td><td>${tx.project || 'N/A'}</td><td>${tx.description}</td><td style="color:${color}">${tx.cat === 'income' ? '+' : '-'}${tx.amount.toFixed(2)}</td>`;
+                tr.innerHTML = `<td>${new Date(tx.date).toLocaleDateString()}</td><td><span style="color:${color};font-weight:bold">${tx.cat.toUpperCase()}</span></td><td>${tx.project || 'N/A'}</td><td>${tx.description}</td><td style="color:${color}">${tx.cat === 'income' ? '+' : '-'}${amt.toFixed(2)}</td>`;
                 tbody.appendChild(tr);
             });
         };

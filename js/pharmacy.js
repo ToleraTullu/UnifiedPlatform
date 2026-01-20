@@ -612,7 +612,7 @@ class PharmacyModule {
             const itemListHtml = (s.items || []).map(i => `
                 <div style="display:flex; justify-content:space-between; border-bottom:1px dashed #eee; padding:4px 0;">
                     <span>${i.item_name || i.name}</span>
-                    <span>${i.quantity_sold || i.qty || 0} ${i.unit_sold_as || i.unit || 'Items'} x $${(i.unit_price_at_sale || i.price || 0).toFixed(2)} = $${((i.quantity_sold || i.qty || 0) * (i.unit_price_at_sale || i.price || 0)).toFixed(2)}</span>
+                    <span>${i.quantity_sold || i.qty || 0} ${i.unit_sold_as || i.unit || 'Items'} x $${(parseFloat(i.unit_price_at_sale) || parseFloat(i.price) || 0).toFixed(2)} = $${((parseFloat(i.quantity_sold) || parseFloat(i.qty) || 0) * (parseFloat(i.unit_price_at_sale) || parseFloat(i.price) || 0)).toFixed(2)}</span>
                 </div>
             `).join('');
 

@@ -8,10 +8,22 @@ class ConstructionModule {
     }
 
     async initDashboard() {
+        console.log("Loading Construction Dashboard - Debug v2");
         const expenses = await window.Store.get(this.expenseKey) || [];
         const incomes = await window.Store.get(this.incomeKey) || [];
-        const totExp = expenses.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
-        const totInc = incomes.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
+
+        // Explicit numeric reduction
+        const totExp = expenses.reduce((acc, curr) => {
+            const val = parseFloat(curr.amount) || 0;
+            return acc + val;
+        }, 0);
+
+        const totInc = incomes.reduce((acc, curr) => {
+            const val = parseFloat(curr.amount) || 0;
+            return acc + val;
+        }, 0);
+
+        console.log("Calculated Totals:", { totExp, totInc });
 
         document.getElementById('cons-dash-expense').textContent = totExp.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
         document.getElementById('cons-dash-income').textContent = totInc.toLocaleString(undefined, { style: 'currency', currency: 'USD' });

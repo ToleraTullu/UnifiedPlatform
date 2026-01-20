@@ -63,13 +63,16 @@ if ($action === 'stock') {
         try {
             $pdo->beginTransaction();
 
+            $bank_account_id = !empty($sale['bank_account_id']) ? $sale['bank_account_id'] : null;
+            $amt = $sale['total_amount'] ?? $sale['total'] ?? 0;
+
             // 1. Insert Sale
             $stmt = $pdo->prepare("INSERT INTO pharmacy_sales (date, total_amount, payment_method, bank_account_id, doctor_name, patient_name) VALUES (?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $sale['date'] ?? date('Y-m-d H:i:s'),
-                $sale['total_amount'],
+                $amt,
                 $sale['payment_method'] ?? 'cash',
-                $sale['bank_account_id'] ?? null,
+                $bank_account_id,
                 $sale['doctor_name'] ?? null,
                 $sale['patient_name'] ?? null
             ]);

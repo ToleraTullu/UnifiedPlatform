@@ -44,6 +44,8 @@ if ($action === 'sites') {
             }
         }
 
+        $bank_account_id = !empty($data['bank_account_id']) ? $data['bank_account_id'] : null;
+
         $stmt = $pdo->prepare("INSERT INTO construction_expenses (site_id, description, amount, date, payment_method, bank_account_id, external_bank_name, external_account_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         try {
             $stmt->execute([
@@ -52,7 +54,7 @@ if ($action === 'sites') {
                 $data['amount'],
                 $data['date'],
                 $data['payment_method'] ?? 'cash',
-                $data['bank_account_id'] ?? null,
+                $bank_account_id,
                 $data['external_bank_name'] ?? null,
                 $data['external_account_number'] ?? null
             ]);
@@ -84,6 +86,8 @@ if ($action === 'sites') {
             }
         }
 
+        $bank_account_id = !empty($data['bank_account_id']) ? $data['bank_account_id'] : null;
+
         $stmt = $pdo->prepare("INSERT INTO construction_income (site_id, description, amount, date, payment_method, bank_account_id) VALUES (?, ?, ?, ?, ?, ?)");
         try {
             $stmt->execute([
@@ -92,7 +96,7 @@ if ($action === 'sites') {
                 $data['amount'],
                 $data['date'],
                 $data['payment_method'] ?? 'cash',
-                $data['bank_account_id'] ?? null
+                $bank_account_id
             ]);
             $data['id'] = $pdo->lastInsertId();
             echo json_encode(['success' => true, 'data' => $data]);

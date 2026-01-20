@@ -176,7 +176,7 @@ class ConstructionModule {
                 date: mysqlDate,
                 type: type,
                 payment_method: pfd.get('payment_method'),
-                bank_account_id: bankId,
+                bank_account_id: (pfd.get('payment_method') === 'bank' && bankId) ? bankId : null,
                 bank_name: bankName,
                 external_bank_name: (type === 'expense') ? pfd.get('external_bank_name') : null,
                 external_account_number: (type === 'expense') ? pfd.get('external_account_number') : null

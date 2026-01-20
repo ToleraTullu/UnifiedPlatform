@@ -309,13 +309,15 @@ class ConstructionModule {
             const dateId = type === 'expense' ? 'exp-date' : 'inc-date';
             const siteId = type === 'expense' ? 'exp-site' : 'inc-site';
 
+            const bankId = pfd.get('bank_account_id');
+
             const data = {
                 site_id: document.getElementById(siteId).value,
                 description: document.getElementById(descId).value,
                 amount: parseFloat(document.getElementById(amtId).value),
                 date: document.getElementById(dateId).value,
                 payment_method: pfd.get('payment_method'),
-                bank_account_id: pfd.get('bank_account_id'),
+                bank_account_id: (pfd.get('payment_method') === 'bank' && bankId) ? bankId : null,
                 external_bank_name: pfd.get('external_bank_name'),
                 external_account_number: pfd.get('external_account_number'),
                 type: type

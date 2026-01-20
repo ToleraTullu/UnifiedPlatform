@@ -289,10 +289,14 @@ class PharmacyModule {
                 if (b) bankName = b.bank_name;
             }
 
+            const now = new Date();
+            const pad = (n) => n.toString().padStart(2, '0');
+            const mysqlDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
             const sale = {
                 items: this.cart,
                 total: total,
-                date: new Date().toISOString(),
+                date: mysqlDate,
                 payment_method: pMethod,
                 bank_account_id: bankId,
                 bank_name: bankName

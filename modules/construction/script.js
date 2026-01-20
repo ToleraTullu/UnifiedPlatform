@@ -162,11 +162,18 @@ class ConstructionModule {
                 if (b) bankName = b.bank_name;
             }
 
+            const inputDate = new Date(activeForm.date.value);
+            const now = new Date();
+            inputDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+            
+            const pad = (n) => n.toString().padStart(2, '0');
+            const mysqlDate = `${inputDate.getFullYear()}-${pad(inputDate.getMonth() + 1)}-${pad(inputDate.getDate())} ${pad(inputDate.getHours())}:${pad(inputDate.getMinutes())}:${pad(inputDate.getSeconds())}`;
+
             const data = {
                 description: activeForm.desc.value,
                 project: activeForm.project.value,
                 amount: parseFloat(activeForm.amount.value),
-                date: new Date(activeForm.date.value).toISOString(),
+                date: mysqlDate,
                 type: type,
                 payment_method: pfd.get('payment_method'),
                 bank_account_id: bankId,

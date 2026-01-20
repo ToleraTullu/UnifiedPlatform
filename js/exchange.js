@@ -436,10 +436,14 @@ class ExchangeModule {
                 }
             }
 
-            const transaction = {
-                id: Date.now(),
-                date: new Date().toISOString(),
-                type: type,
+        const now = new Date();
+        const pad = (n) => n.toString().padStart(2, '0');
+        const mysqlDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+        const transaction = {
+            id: Date.now(),
+            date: mysqlDate,
+            type: type,
                 customer_name: fd.get('customer'),
                 customer_id: fd.get('cid'),
                 currency_code: code,

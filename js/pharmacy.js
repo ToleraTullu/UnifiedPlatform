@@ -183,7 +183,7 @@ class PharmacyModule {
 
         // Add to cart
         this.cart.push({
-            itemId,
+            id: itemId,
             name: stockItem.name,
             qty: qty, // Visual qty (e.g. 1 Box)
             unit: unitType,

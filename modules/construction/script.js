@@ -25,9 +25,9 @@ class ConstructionModule {
 
         console.log("Calculated Totals:", { totExp, totInc });
 
-        document.getElementById('cons-dash-expense').textContent = totExp.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
-        document.getElementById('cons-dash-income').textContent = totInc.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
-        document.getElementById('cons-dash-balance').textContent = (totInc - totExp).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+        document.getElementById('cons-dash-expense').textContent = totExp.toLocaleString(undefined, { style: 'currency', currency: 'ETB' });
+        document.getElementById('cons-dash-income').textContent = totInc.toLocaleString(undefined, { style: 'currency', currency: 'ETB' });
+        document.getElementById('cons-dash-balance').textContent = (totInc - totExp).toLocaleString(undefined, { style: 'currency', currency: 'ETB' });
 
         // Project breakdown
         const projectStats = {};
@@ -53,9 +53,9 @@ class ConstructionModule {
             div.innerHTML = `
                 <strong>${proj}</strong>
                 <div style="display: flex; gap: 20px;">
-                    <span>Income: <span style="color: green;">$${stats.inc.toFixed(2)}</span></span>
-                    <span>Expenses: <span style="color: red;">$${stats.exp.toFixed(2)}</span></span>
-                    <span>Balance: <span style="color: ${balanceColor};">$${balance.toFixed(2)}</span></span>
+                    <span>Income: <span style="color: green;">${stats.inc.toLocaleString(undefined, { style: 'currency', currency: 'ETB' })}</span></span>
+                    <span>Expenses: <span style="color: red;">${stats.exp.toLocaleString(undefined, { style: 'currency', currency: 'ETB' })}</span></span>
+                    <span>Balance: <span style="color: ${balanceColor};">${balance.toLocaleString(undefined, { style: 'currency', currency: 'ETB' })}</span></span>
                 </div>
             `;
             breakdownDiv.appendChild(div);

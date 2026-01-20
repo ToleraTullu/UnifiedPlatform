@@ -87,7 +87,7 @@ if ($action === 'stock') {
                 foreach ($sale['items'] as $soldItem) {
                     // Check if soldItem has 'id' (item_id)
                     // Sometimes frontend sends it as 'id' or 'item_id'
-                    $itemId = $soldItem['id'] ?? $soldItem['item_id'];
+                    $itemId = $soldItem['id'] ?? $soldItem['item_id'] ?? $soldItem['itemId'];
 
                     $stmtItem->execute([
                         $saleId,

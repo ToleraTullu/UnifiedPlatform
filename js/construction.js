@@ -177,7 +177,7 @@ class ConstructionModule {
 
         const setTxt = (id, val) => {
             const el = document.getElementById(id);
-            if (el) el.textContent = val.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+            if (el) el.textContent = val.toLocaleString(undefined, { style: 'currency', currency: 'ETB' });
         };
 
         setTxt('cons-dash-expense', totExp);
@@ -244,7 +244,7 @@ class ConstructionModule {
         body.innerHTML = `
             <div style="margin-bottom:20px; padding:15px; background:var(--bg-input); border-radius:8px; text-align:center;">
                 <div style="font-size:0.9rem; color:var(--text-muted); text-transform:uppercase;">Total Amount to ${type === 'expense' ? 'PAY' : 'RECEIVE'}</div>
-                <div style="font-size:2rem; font-weight:800; color:var(--text-main);">${amount.toFixed(2)} <span style="font-size:1rem; font-weight:400;">USD</span></div>
+                <div style="font-size:2rem; font-weight:800; color:var(--text-main);">${amount.toFixed(2)} <span style="font-size:1rem; font-weight:400;">ETB</span></div>
                 <div style="font-size:0.9rem; margin-top:5px;">Site: ${siteName}</div>
             </div>
 

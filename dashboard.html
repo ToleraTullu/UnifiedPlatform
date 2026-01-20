@@ -446,19 +446,19 @@
                         <form id="construction-expense-form">
                             <div class="form-group">
                                 <label>Project / Site</label>
-                                <select id="exp-site" required></select>
+                                <select id="exp-site" name="site" required></select>
                             </div>
                             <div class="form-group">
                                 <label>Description</label>
-                                <input type="text" id="exp-desc" required>
+                                <input type="text" id="exp-desc" name="description" required>
                             </div>
                             <div class="form-group">
                                 <label>Amount</label>
-                                <input type="number" id="exp-amount" required step="0.01">
+                                <input type="number" id="exp-amount" name="amount" required step="0.01">
                             </div>
                             <div class="form-group">
                                 <label>Date</label>
-                                <input type="date" id="exp-date" required>
+                                <input type="date" id="exp-date" name="date" required>
                             </div>
                             <button type="submit" class="btn-danger">Record Expense</button>
                         </form>
@@ -471,19 +471,19 @@
                         <form id="construction-income-form">
                             <div class="form-group">
                                 <label>Project / Site</label>
-                                <select id="inc-site" required></select>
+                                <select id="inc-site" name="site" required></select>
                             </div>
                             <div class="form-group">
                                 <label>Source / Unit</label>
-                                <input type="text" id="inc-desc" required>
+                                <input type="text" id="inc-desc" name="description" required>
                             </div>
                             <div class="form-group">
                                 <label>Amount</label>
-                                <input type="number" id="inc-amount" required step="0.01">
+                                <input type="number" id="inc-amount" name="amount" required step="0.01">
                             </div>
                             <div class="form-group">
                                 <label>Date</label>
-                                <input type="date" id="inc-date" required>
+                                <input type="date" id="inc-date" name="date" required>
                             </div>
                             <button type="submit" class="btn-success">Record Income</button>
                         </form>

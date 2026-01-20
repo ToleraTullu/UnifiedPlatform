@@ -161,23 +161,15 @@ class PharmacyModule {
             pricePer = basePrice / stockItem.items_per_unit;
             deduction = qty;
         } else if (unitType !== 'Item' && stockItem.unit_type === 'Item') {
+            // Selling Box from Single Item Stock (Unlikely but possible)
+            // Not supported well without defined pack size on item.
             // Fallback
             pricePer = basePrice * (stockItem.items_per_unit || 1);
             deduction = qty * (stockItem.items_per_unit || 1);
         }
 
         if (stockItem.qty < deduction) {
-            // Improve Error Message for Boxes
-            let avail = stockItem.qty;
-            let req = deduction;
-            if (unitType === 'Box' && stockItem.items_per_unit > 1) {
-                avail = (avail / stockItem.items_per_unit).toFixed(1) + ' Boxes';
-                req = qty + ' Boxes';
-            } else {
-                avail += ' Items';
-                req += ' Items';
-            }
-            UI.error(`Insufficient Stock! Need ${req}, have ${avail} internal.`);
+            UI.error(`Insufficient Stock! Need ${deduction} items, have ${stockItem.qty}.`);
             return;
         }
 
@@ -385,13 +377,6 @@ class PharmacyModule {
             const units = Math.floor((item.qty || 0) / perUnit);
             const remainder = (item.qty || 0) % perUnit;
             const unitText = item.unit_type !== 'Item' ? `(${units} ${item.unit_type}${remainder > 0 ? ' + ' + remainder : ''})` : '';
-            
-            // Price Display: Show per Box if Unit Type is Box
-            const price = parseFloat(item.sell_price || (item.buy_price * 1.5));
-            const priceDisplay = `$${price.toFixed(2)} per ${item.unit_type || 'Item'}`; 
-            
-            // If we want to show single price too:
-            // const singlePrice = (price / perUnit).toFixed(2);
 
             tr.className = expiryClass;
             tr.innerHTML = `
@@ -400,8 +385,8 @@ class PharmacyModule {
                     <b>${item.name}</b><br>
                     <small class="text-muted">Batch: ${item.batch_number || '-'}</small>
                 </td>
-                <td>${priceDisplay}</td>
-                <td>${item.qty} Items <br><small class="text-muted">${unitText}</small></td>
+                <td>$${parseFloat(item.sell_price || (item.buy_price * 1.5)).toFixed(2)} per ${item.unit_type || 'Item'}</td>
+                <td>${item.qty} Items <small class="text-muted">${unitText}</small></td>
                 <td>${item.exp_date || '-'}</td>
                 <td>
                     <button class="btn-secondary" onclick="window.PharmacyModule.openStockModal(${item.id})">Edit</button>
@@ -466,7 +451,7 @@ class PharmacyModule {
                 </div>
 
                 <div class="form-group">
-                    <label>Sell Price (Per Unit/Box)</label>
+                    <label>Sell Price (Per Unit)</label>
                     <input type="number" id="st-sell-price" value="${item ? item.sell_price || '' : ''}" required step="0.01">
                 </div>
                 

@@ -57,16 +57,6 @@ class Analytics {
         this.updateMetricDisplay('analytics-construction-profit', currentMetrics.constructionProfit, previousMetrics.constructionProfit);
     }
 
-    // Helper to parse currency strings (e.g. "1,000.50")
-    parseMoney(val) {
-        if (typeof val === 'number') return val;
-        if (!val) return 0;
-        // Remove commas and non-numeric chars except dot and minus
-        const clean = val.toString().replace(/[^0-9.-]/g, '');
-        const num = parseFloat(clean);
-        return isNaN(num) ? 0 : num;
-    }
-
     async getMetricsForPeriod(startDate, endDate) {
         const metrics = {
             totalRevenue: 0,
@@ -80,7 +70,7 @@ class Analytics {
         exchangeTx.forEach(tx => {
             const txDate = new Date(tx.date);
             if (txDate >= startDate && txDate <= endDate) {
-                const vol = this.parseMoney(tx.total);
+                const vol = parseFloat(tx.total) || 0;
                 metrics.exchangeVolume += vol;
                 metrics.totalRevenue += vol * 0.02; // 2% markup estimate
             }
@@ -91,7 +81,7 @@ class Analytics {
         pharmacySales.forEach(sale => {
             const saleDate = new Date(sale.date);
             if (saleDate >= startDate && saleDate <= endDate) {
-                const total = this.parseMoney(sale.total);
+                const total = parseFloat(sale.total) || 0;
                 metrics.pharmacySales += total;
                 metrics.totalRevenue += total * 0.25; // 25% profit margin estimate
             }
@@ -104,11 +94,11 @@ class Analytics {
         let incVal = 0, expVal = 0;
         constructionIncome.forEach(inc => {
             const incDate = new Date(inc.date);
-            if (incDate >= startDate && incDate <= endDate) incVal += this.parseMoney(inc.amount);
+            if (incDate >= startDate && incDate <= endDate) incVal += (parseFloat(inc.amount) || 0);
         });
         constructionExpenses.forEach(exp => {
             const expDate = new Date(exp.date);
-            if (expDate >= startDate && expDate <= endDate) expVal += this.parseMoney(exp.amount);
+            if (expDate >= startDate && expDate <= endDate) expVal += (parseFloat(exp.amount) || 0);
         });
 
         metrics.constructionProfit = incVal - expVal;

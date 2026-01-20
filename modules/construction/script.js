@@ -7,25 +7,31 @@ class ConstructionModule {
         this.incomeKey = 'construction_income';
     }
 
+<<<<<<< HEAD
     async initDashboard() {
         const expenses = await window.Store.get(this.expenseKey) || [];
         const incomes = await window.Store.get(this.incomeKey) || [];
+=======
+    initDashboard() {
+        const expenses = window.Store.get(this.expenseKey) || [];
+        const incomes = window.Store.get(this.incomeKey) || [];
+>>>>>>> e21c58b1484587c61e5c0ad91e5412a49577fb22
         const totExp = expenses.reduce((a, c) => a + parseFloat(c.amount || 0), 0);
         const totInc = incomes.reduce((a, c) => a + parseFloat(c.amount || 0), 0);
 
-        document.getElementById('cons-dash-expense').textContent = totExp.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
-        document.getElementById('cons-dash-income').textContent = totInc.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
-        document.getElementById('cons-dash-balance').textContent = (totInc - totExp).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+        document.getElementById('cons-dash-expense').textContent = (totExp || 0).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+        document.getElementById('cons-dash-income').textContent = (totInc || 0).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+        document.getElementById('cons-dash-balance').textContent = ((totInc || 0) - (totExp || 0)).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
         // Project breakdown
         const projectStats = {};
         expenses.forEach(exp => {
-            const proj = exp.project || 'Unassigned';
+            const proj = exp.site || exp.project || 'Unassigned';
             if (!projectStats[proj]) projectStats[proj] = { exp: 0, inc: 0 };
             projectStats[proj].exp += parseFloat(exp.amount || 0);
         });
         incomes.forEach(inc => {
-            const proj = inc.project || 'Unassigned';
+            const proj = inc.site || inc.project || 'Unassigned';
             if (!projectStats[proj]) projectStats[proj] = { exp: 0, inc: 0 };
             projectStats[proj].inc += parseFloat(inc.amount || 0);
         });
@@ -52,7 +58,7 @@ class ConstructionModule {
 
     initForm(type) {
         const form = document.querySelector('form');
-        
+
         // Restrict date to today only
         const dateInput = form.querySelector('input[name="date"]');
         if (dateInput) {
@@ -61,7 +67,7 @@ class ConstructionModule {
             dateInput.max = today;
             dateInput.value = today;
         }
-        
+
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             this.showPaymentModal(type, form);
@@ -75,18 +81,18 @@ class ConstructionModule {
 
         const fd = new FormData(activeForm);
         const amount = parseFloat(fd.get('amount') || 0);
-        const project = fd.get('project') || 'N/A';
+        const project = fd.get('site') || 'N/A';
 
         title.textContent = 'Finalize Payment';
-        
-        const allBanks = await window.Store.get('bank_accounts') || [];
+
+        const allBanks = window.Store.get('bank_accounts') || [];
         const consBanks = allBanks.filter(b => !b.sectors || b.sectors.includes('construction') || b.sectors === 'all');
         const bankOptions = consBanks.map(b => `<option value="${b.id}">${b.bank_name} - ${b.account_number}</option>`).join('');
 
         body.innerHTML = `
             <div style="margin-bottom:20px; padding:15px; background:var(--bg-input); border-radius:8px; text-align:center;">
                 <div style="font-size:0.9rem; color:var(--text-muted); text-transform:uppercase;">Total Amount to ${type === 'expense' ? 'PAY' : 'RECEIVE'}</div>
-                <div style="font-size:2rem; font-weight:800; color:var(--text-main);">${amount.toFixed(2)} <span style="font-size:1rem; font-weight:400;">ETB</span></div>
+                <div style="font-size:2rem; font-weight:800; color:var(--text-main);">${amount.toFixed(2)} <span style="font-size:1rem; font-weight:400;">USD</span></div>
                 <div style="font-size:0.9rem; margin-top:5px;">Project: ${project}</div>
             </div>
 
@@ -99,6 +105,9 @@ class ConstructionModule {
                         </label>
                         <label style="display:flex; align-items:center; gap:8px; font-weight:normal; cursor:pointer;">
                             <input type="radio" name="payment_method" value="bank" style="width:18px; height:18px;"> Bank Transfer
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px; font-weight:normal; cursor:pointer;">
+                            <input type="radio" name="payment_method" value="credit" style="width:18px; height:18px;"> Credit
                         </label>
                     </div>
                 </div>
@@ -130,12 +139,12 @@ class ConstructionModule {
 
         const pform = document.getElementById('payment-finalize-form');
         const bankSelector = document.getElementById('modal-bank-selector');
-        
+
         pform.querySelectorAll('input[name="payment_method"]').forEach(radio => {
             radio.addEventListener('change', () => {
                 bankSelector.style.display = radio.value === 'bank' ? 'block' : 'none';
                 const bankSelect = pform.querySelector('select[name="bank_account_id"]');
-                if(radio.value === 'bank') bankSelect.setAttribute('required', 'true');
+                if (radio.value === 'bank') bankSelect.setAttribute('required', 'true');
                 else bankSelect.removeAttribute('required');
             });
         });
@@ -151,9 +160,9 @@ class ConstructionModule {
             }
 
             const data = {
-                description: activeForm.desc.value,
-                project: activeForm.project.value,
-                amount: parseFloat(activeForm.amount.value),
+                description: activeForm.description.value,
+                site: activeForm.site.value,
+                amount: parseFloat(activeForm.amount.value) || 0,
                 date: new Date(activeForm.date.value).toISOString(),
                 type: type,
                 payment_method: pfd.get('payment_method'),
@@ -169,12 +178,14 @@ class ConstructionModule {
             await window.Store.addActivityLog({
                 action_type: 'ADD',
                 module_name: 'Construction',
-                details: `${type.toUpperCase()} recorded for ${data.project}: ${data.amount}`
+                details: `${type.toUpperCase()} recorded for ${data.site}: ${data.amount}`
             });
 
             modal.classList.add('hidden');
+            this.initDashboard(); // Ensure UI updates
+            this.initRecords();   // Refresh records if visible
 
-            if(confirm('Transaction Recorded! Print Receipt?')) {
+            if (confirm('Transaction Recorded! Print Receipt?')) {
                 this.printReceipt(saved);
             }
 
@@ -202,7 +213,7 @@ class ConstructionModule {
                     <p>Ref: ${tx.id}</p>
                 </div>
                 <div class="row"><span>Type:</span><span>${tx.type.toUpperCase()}</span></div>
-                <div class="row"><span>Project:</span><span>${tx.project || 'N/A'}</span></div>
+                <div class="row"><span>Site:</span><span>${tx.site || 'N/A'}</span></div>
                 <div class="row"><span>Description:</span><span>${tx.description}</span></div>
                 <hr>
                 <div class="row" style="font-weight:bold"><span>Amount:</span><span>$${tx.amount.toFixed(2)}</span></div>
@@ -225,26 +236,28 @@ class ConstructionModule {
         const all = [...expenses, ...incomes];
         all.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        // Get unique projects
-        const projects = [...new Set(all.map(tx => tx.project).filter(p => p))];
+        // Get unique sites
+        const projects = [...new Set(all.map(tx => tx.site).filter(p => p))];
         const select = document.getElementById('project-select');
-        select.innerHTML = '<option value="">Select a Project</option>';
-        projects.forEach(project => {
-            const option = document.createElement('option');
-            option.value = project;
-            option.textContent = project;
-            select.appendChild(option);
-        });
+        if (select) {
+            select.innerHTML = '<option value="">Select a Site</option>';
+            projects.forEach(project => {
+                const option = document.createElement('option');
+                option.value = project;
+                option.textContent = project;
+                select.appendChild(option);
+            });
+        }
 
-        // Function to render records
         const renderRecords = (selectedProject) => {
             const tbody = document.querySelector('tbody');
+            if (!tbody) return;
             tbody.innerHTML = '';
-            const filtered = selectedProject ? all.filter(tx => tx.project === selectedProject) : [];
+            const filtered = selectedProject ? all.filter(tx => tx.site === selectedProject) : [];
             filtered.forEach(tx => {
                 const color = tx.cat === 'income' ? 'green' : 'red';
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${new Date(tx.date).toLocaleDateString()}</td><td><span style="color:${color};font-weight:bold">${tx.cat.toUpperCase()}</span></td><td>${tx.project || 'N/A'}</td><td>${tx.description}</td><td style="color:${color}">${tx.cat === 'income' ? '+' : '-'}${tx.amount.toFixed(2)}</td>`;
+                tr.innerHTML = `<td>${new Date(tx.date).toLocaleDateString()}</td><td><span style="color:${color};font-weight:bold">${tx.cat.toUpperCase()}</span></td><td>${tx.site || tx.project || 'N/A'}</td><td>${tx.description}</td><td style="color:${color}">${tx.cat === 'income' ? '+' : '-'}${tx.amount.toFixed(2)}</td>`;
                 tbody.appendChild(tr);
             });
         };

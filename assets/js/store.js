@@ -5,6 +5,53 @@
 
 const API_BASE = 'api/';
 
+const INIT_KEYS = {
+  unified_users: MOCK_USERS,
+  exchange_transactions: [],
+  pharmacy_items: [
+    {
+      id: 1,
+      name: "Paracetamol",
+      buy_price: 10,
+      sell_price: 15,
+      qty: 100,
+      unit_type: "pcs",
+      pieces_per_box: 1,
+      manuf_date: "2024-01-01",
+      expiry_date: "2026-01-01",
+    },
+    {
+      id: 2,
+      name: "Amoxicillin",
+      buy_price: 25,
+      sell_price: 40,
+      qty: 50,
+      unit_type: "box",
+      pieces_per_box: 10,
+      manuf_date: "2023-06-01",
+      expiry_date: "2025-06-01",
+    },
+    {
+      id: 3,
+      name: "Vitamin C",
+      buy_price: 5,
+      sell_price: 8,
+      qty: 200,
+      unit_type: "pcs",
+      pieces_per_box: 1,
+      manuf_date: "2024-03-01",
+      expiry_date: "2026-03-01",
+    },
+  ],
+  pharmacy_sales: [],
+  construction_expenses: [],
+  construction_income: [],
+  bank_accounts: [],
+  exchange_rates: {
+    USD: { buy: 1.0, sell: 1.02 },
+    EUR: { buy: 0.9, sell: 0.92 },
+    GBP: { buy: 0.8, sell: 0.82 }
+  },
 const ENDPOINTS = {
     'unified_users': 'users.php',
     'exchange_transactions': 'exchange.php?action=transactions',

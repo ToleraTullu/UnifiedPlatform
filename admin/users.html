@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,6 +9,7 @@
   <link rel="stylesheet" href="../assets/bootstrap/css/bootstrap.min.css">
 
 </head>
+
 <body>
   <div class="app-container">
     <aside class="sidebar"></aside>
@@ -15,12 +17,12 @@
       <header class="topbar"></header>
       <div class="content-wrapper">
         <div class="grid-layout" style="display: grid; grid-template-columns: 350px 1fr; gap: 2rem;">
-          
+
           <!-- Create/Edit Form -->
           <div class="card">
             <h3>User Profile</h3>
             <p style="color:var(--text-muted); margin-bottom:1.5rem;">Configure system access and roles.</p>
-            
+
             <form id="user-form">
               <input type="hidden" id="edit-mode" value="">
               <div class="form-group">
@@ -54,21 +56,22 @@
           <!-- Users List -->
           <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-                <h3 style="margin:0">Active Users</h3>
-                <div id="no-access" style="display:none; color:var(--danger); font-size:0.9rem; font-weight:600;">⚠️ Admin Only</div>
+              <h3 style="margin:0">Active Users</h3>
+              <div id="no-access" style="display:none; color:var(--danger); font-size:0.9rem; font-weight:600;">⚠️ Admin
+                Only</div>
             </div>
-            
+
             <div class="table-container">
-                <table class="data-table">
-                  <thead>
-                      <tr>
-                          <th>User Details</th>
-                          <th>System Role</th>
-                          <th style="text-align:right">Actions</th>
-                      </tr>
-                  </thead>
-                  <tbody id="users-body"></tbody>
-                </table>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>User Details</th>
+                    <th>System Role</th>
+                    <th style="text-align:right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="users-body"></tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -81,11 +84,6 @@
   <script src="../assets/js/layout.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const layout = new Layout();
-      layout.ensureLayoutContainers();
-      layout.renderSidebar();
-      layout.renderTopbar();
-
       const user = window.Auth && window.Auth.currentUser;
       if (!user || user.role !== 'admin') {
         document.getElementById('no-access').style.display = 'block';
@@ -128,24 +126,24 @@
         const fd = new FormData(form);
         const uname = fd.get('username').trim();
         const users = window.Store.get('unified_users') || [];
-        
+
         if (editMode.value) {
-            const idx = users.findIndex(u => u.username === editMode.value);
-            if (idx !== -1) {
-                users[idx].name = fd.get('name');
-                users[idx].role = fd.get('role');
-                if (fd.get('password')) users[idx].password = fd.get('password');
-            }
+          const idx = users.findIndex(u => u.username === editMode.value);
+          if (idx !== -1) {
+            users[idx].name = fd.get('name');
+            users[idx].role = fd.get('role');
+            if (fd.get('password')) users[idx].password = fd.get('password');
+          }
         } else {
-            if (users.some(u => u.username === uname)) { alert('Username already exists'); return; }
-            users.push({ 
-                username: uname, 
-                password: fd.get('password'), 
-                name: fd.get('name') || '', 
-                role: fd.get('role') 
-            });
+          if (users.some(u => u.username === uname)) { alert('Username already exists'); return; }
+          users.push({
+            username: uname,
+            password: fd.get('password'),
+            name: fd.get('name') || '',
+            role: fd.get('role')
+          });
         }
-        
+
         window.Store.set('unified_users', users);
         resetForm();
         render();
@@ -154,17 +152,17 @@
       tbody.addEventListener('click', (ev) => {
         const btn = ev.target.closest('button'); if (!btn) return;
         const uname = btn.dataset.user;
-        
+
         if (btn.classList.contains('delete-user')) {
           if (!confirm('Delete user @' + uname + '?')) return;
           let users = window.Store.get('unified_users') || [];
           users = users.filter(u => u.username !== uname);
-          window.Store.set('unified_users', users); 
+          window.Store.set('unified_users', users);
           render();
         } else if (btn.classList.contains('edit-user')) {
           const users = window.Store.get('unified_users') || [];
           const u = users.find(x => x.username === uname);
-          if (!u) return; 
+          if (!u) return;
 
           editMode.value = u.username;
           document.getElementById('u-username').value = u.username;
@@ -173,7 +171,7 @@
           document.getElementById('u-role').value = u.role;
           document.getElementById('u-password').required = false;
           document.getElementById('u-password').placeholder = '(Leave blank to keep same)';
-          
+
           submitBtn.textContent = 'Update User';
           cancelBtn.style.display = 'block';
         }
@@ -193,4 +191,5 @@
     });
   </script>
 </body>
+
 </html>

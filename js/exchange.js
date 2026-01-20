@@ -131,6 +131,7 @@ class ExchangeModule {
     renderDashboard() {
         const currencies = this.getCurrencies(); // Note: this is async but we don't await here, updateStats is async
         this.updateStats();
+        this.renderWeeklyChart(); // Render weekly trend chart
     }
 
     async updateStats() {
@@ -175,6 +176,81 @@ class ExchangeModule {
         // Update Global Stat
         const globalEl = document.getElementById('stat-exchange');
         if (globalEl) globalEl.textContent = totalVol.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+    }
+
+    async renderWeeklyChart() {
+        const canvas = document.getElementById('exchange-weekly-chart');
+        if (!canvas) return;
+
+        // Wait for Chart.js to load
+        if (!window.Chart) {
+            setTimeout(() => this.renderWeeklyChart(), 500);
+            return;
+        }
+
+        const transactions = await window.Store.get(this.txKey) || [];
+        const weeks = 8;
+        const labels = [];
+        const data = [];
+
+        const now = new Date();
+        
+        for (let i = weeks - 1; i >= 0; i--) {
+            const weekEnd = new Date(now.getTime() - (i * 7 * 24 * 60 * 60 * 1000));
+            const weekStart = new Date(weekEnd.getTime() - (6 * 24 * 60 * 60 * 1000));
+            
+            labels.push(weekEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+            
+            // Calculate volume for this week (total local currency value)
+            const weekVolume = transactions.filter(tx => {
+                const txDate = new Date(tx.date);
+                return txDate >= weekStart && txDate <= weekEnd;
+            }).reduce((sum, tx) => {
+                const amt = parseFloat(tx.amount) || 0;
+                const rate = parseFloat(tx.rate) || 0;
+                return sum + (amt * rate);
+            }, 0);
+            
+            data.push(weekVolume);
+        }
+
+        // Destroy existing chart if it exists
+        if (this.weeklyChart) this.weeklyChart.destroy();
+
+        this.weeklyChart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Weekly Volume',
+                    data: data,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `Volume: ${context.parsed.y.toLocaleString(undefined, {style: 'currency', currency: 'ETB'})}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => value.toLocaleString() + ' ETB'
+                        }
+                    }
+                }
+            }
+        });
     }
 
     // --- Forms ---

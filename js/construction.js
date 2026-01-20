@@ -185,6 +185,8 @@ class ConstructionModule {
         setTxt('cons-dash-balance', bal);
         setTxt('cons-dash-credit-expense', credExp);
         setTxt('cons-dash-credit-income', credInc);
+        
+        this.renderWeeklyChart(); // Render weekly trend chart
     }
 
     async updateStats() {
@@ -195,6 +197,82 @@ class ConstructionModule {
 
         const el = document.getElementById('stat-construction');
         if (el) el.textContent = (totInc - totExp).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+    }
+
+    async renderWeeklyChart() {
+        const canvas = document.getElementById('construction-weekly-chart');
+        if (!canvas) return;
+
+        // Wait for Chart.js to load
+        if (!window.Chart) {
+            setTimeout(() => this.renderWeeklyChart(), 500);
+            return;
+        }
+
+        const expenses = await window.Store.get(this.expKey) || [];
+        const incomes = await window.Store.get(this.incKey) || [];
+        const weeks = 8;
+        const labels = [];
+        const data = [];
+
+        const now = new Date();
+        
+        for (let i = weeks - 1; i >= 0; i--) {
+            const weekEnd = new Date(now.getTime() - (i * 7 * 24 * 60 * 60 * 1000));
+            const weekStart = new Date(weekEnd.getTime() - (6 * 24 * 60 * 60 * 1000));
+            
+            labels.push(weekEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+            
+            // Calculate balance for this week (income - expenses)
+            const weekIncome = incomes.filter(tx => {
+                const txDate = new Date(tx.date);
+                return txDate >= weekStart && txDate <= weekEnd;
+            }).reduce((sum, tx) => sum + (parseFloat(tx.amount) || 0), 0);
+            
+            const weekExpense = expenses.filter(tx => {
+                const txDate = new Date(tx.date);
+                return txDate >= weekStart && txDate <= weekEnd;
+            }).reduce((sum, tx) => sum + (parseFloat(tx.amount) || 0), 0);
+            
+            data.push(weekIncome - weekExpense);
+        }
+
+        // Destroy existing chart if it exists
+        if (this.weeklyChart) this.weeklyChart.destroy();
+
+        this.weeklyChart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Weekly Balance',
+                    data: data,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `Balance: ${context.parsed.y.toLocaleString(undefined, {style: 'currency', currency: 'ETB'})}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: {
+                            callback: (value) => value.toLocaleString() + ' ETB'
+                        }
+                    }
+                }
+            }
+        });
     }
 
     // --- Forms ---

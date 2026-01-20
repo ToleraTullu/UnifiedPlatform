@@ -80,7 +80,9 @@ class Analytics {
         exchangeTx.forEach(tx => {
             const txDate = new Date(tx.date);
             if (txDate >= startDate && txDate <= endDate) {
-                const vol = this.parseMoney(tx.total);
+                const amt = parseFloat(tx.amount) || 0;
+                const rate = parseFloat(tx.rate) || 0;
+                const vol = amt * rate;
                 metrics.exchangeVolume += vol;
                 metrics.totalRevenue += vol * 0.02; // 2% markup estimate
             }
@@ -91,7 +93,7 @@ class Analytics {
         pharmacySales.forEach(sale => {
             const saleDate = new Date(sale.date);
             if (saleDate >= startDate && saleDate <= endDate) {
-                const total = this.parseMoney(sale.total);
+                const total = parseFloat(sale.total_amount) || parseFloat(sale.total) || 0;
                 metrics.pharmacySales += total;
                 metrics.totalRevenue += total * 0.25; // 25% profit margin estimate
             }
@@ -104,11 +106,11 @@ class Analytics {
         let incVal = 0, expVal = 0;
         constructionIncome.forEach(inc => {
             const incDate = new Date(inc.date);
-            if (incDate >= startDate && incDate <= endDate) incVal += this.parseMoney(inc.amount);
+            if (incDate >= startDate && incDate <= endDate) incVal += (parseFloat(inc.amount) || 0);
         });
         constructionExpenses.forEach(exp => {
             const expDate = new Date(exp.date);
-            if (expDate >= startDate && expDate <= endDate) expVal += this.parseMoney(exp.amount);
+            if (expDate >= startDate && expDate <= endDate) expVal += (parseFloat(exp.amount) || 0);
         });
 
         metrics.constructionProfit = incVal - expVal;
@@ -219,13 +221,13 @@ class Analytics {
 
             let dayRev = 0;
             // Exchange
-            exTx.forEach(t => { if(new Date(t.date) >= dayStart && new Date(t.date) <= dayEnd) dayRev += parseFloat(t.total) * 0.02; });
+            exTx.forEach(t => { if(new Date(t.date) >= dayStart && new Date(t.date) <= dayEnd) dayRev += ((parseFloat(t.amount) || 0) * (parseFloat(t.rate) || 0)) * 0.02; });
             // Pharmacy
-            phTx.forEach(t => { if(new Date(t.date) >= dayStart && new Date(t.date) <= dayEnd) dayRev += t.total * 0.25; });
+            phTx.forEach(t => { if(new Date(t.date) >= dayStart && new Date(t.date) <= dayEnd) dayRev += (parseFloat(t.total_amount) || parseFloat(t.total) || 0) * 0.25; });
             // Construction
             let coDay = 0;
-            coInc.forEach(t => { if(new Date(t.date) >= dayStart && new Date(t.date) <= dayEnd) coDay += t.amount; });
-            coExp.forEach(t => { if(new Date(t.date) >= dayStart && new Date(t.date) <= dayEnd) coDay -= t.amount; });
+            coInc.forEach(t => { if(new Date(t.date) >= dayStart && new Date(t.date) <= dayEnd) coDay += (parseFloat(t.amount) || 0); });
+            coExp.forEach(t => { if(new Date(t.date) >= dayStart && new Date(t.date) <= dayEnd) coDay -= (parseFloat(t.amount) || 0); });
             dayRev += Math.max(0, coDay);
 
             revenue.push(dayRev);

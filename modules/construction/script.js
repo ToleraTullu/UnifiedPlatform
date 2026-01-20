@@ -10,8 +10,8 @@ class ConstructionModule {
     async initDashboard() {
         const expenses = await window.Store.get(this.expenseKey) || [];
         const incomes = await window.Store.get(this.incomeKey) || [];
-        const totExp = expenses.reduce((a, c) => a + c.amount, 0);
-        const totInc = incomes.reduce((a, c) => a + c.amount, 0);
+        const totExp = expenses.reduce((a, c) => a + parseFloat(c.amount || 0), 0);
+        const totInc = incomes.reduce((a, c) => a + parseFloat(c.amount || 0), 0);
 
         document.getElementById('cons-dash-expense').textContent = totExp.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
         document.getElementById('cons-dash-income').textContent = totInc.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
@@ -22,12 +22,12 @@ class ConstructionModule {
         expenses.forEach(exp => {
             const proj = exp.project || 'Unassigned';
             if (!projectStats[proj]) projectStats[proj] = { exp: 0, inc: 0 };
-            projectStats[proj].exp += exp.amount;
+            projectStats[proj].exp += parseFloat(exp.amount || 0);
         });
         incomes.forEach(inc => {
             const proj = inc.project || 'Unassigned';
             if (!projectStats[proj]) projectStats[proj] = { exp: 0, inc: 0 };
-            projectStats[proj].inc += inc.amount;
+            projectStats[proj].inc += parseFloat(inc.amount || 0);
         });
 
         const breakdownDiv = document.getElementById('projects-breakdown');

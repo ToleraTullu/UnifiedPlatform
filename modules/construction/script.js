@@ -7,11 +7,11 @@ class ConstructionModule {
         this.incomeKey = 'construction_income';
     }
 
-    initDashboard() {
-        const expenses = window.Store.get(this.expenseKey) || [];
-        const incomes = window.Store.get(this.incomeKey) || [];
-        const totExp = expenses.reduce((a, c) => a + c.amount, 0);
-        const totInc = incomes.reduce((a, c) => a + c.amount, 0);
+    async initDashboard() {
+        const expenses = await window.Store.get(this.expenseKey) || [];
+        const incomes = await window.Store.get(this.incomeKey) || [];
+        const totExp = expenses.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
+        const totInc = incomes.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
 
         document.getElementById('cons-dash-expense').textContent = totExp.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
         document.getElementById('cons-dash-income').textContent = totInc.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
@@ -68,7 +68,7 @@ class ConstructionModule {
         });
     }
 
-    showPaymentModal(type, activeForm) {
+    async showPaymentModal(type, activeForm) {
         const modal = document.getElementById('modal-container');
         const title = document.getElementById('modal-title');
         const body = document.getElementById('modal-body');
@@ -79,7 +79,7 @@ class ConstructionModule {
 
         title.textContent = 'Finalize Payment';
         
-        const allBanks = window.Store.get('bank_accounts') || [];
+        const allBanks = await window.Store.get('bank_accounts') || [];
         const consBanks = allBanks.filter(b => !b.sectors || b.sectors.includes('construction') || b.sectors === 'all');
         const bankOptions = consBanks.map(b => `<option value="${b.id}">${b.bank_name} - ${b.account_number}</option>`).join('');
 
@@ -140,7 +140,7 @@ class ConstructionModule {
             });
         });
 
-        pform.onsubmit = (e) => {
+        pform.onsubmit = async (e) => {
             e.preventDefault();
             const pfd = new FormData(pform);
             const bankId = pfd.get('bank_account_id');
@@ -164,12 +164,12 @@ class ConstructionModule {
             };
 
             const key = type === 'expense' ? this.expenseKey : this.incomeKey;
-            const saved = window.Store.add(key, data);
+            const saved = await window.Store.add(key, data);
 
-            window.Store.addActivityLog({
+            await window.Store.addActivityLog({
                 action_type: 'ADD',
                 module_name: 'Construction',
-                details: `${type.toUpperCase()} recorded for ${data.project}: ${data.amount}`
+                details: `${type.toUpperCase()} recorded for ${data.project || 'Site'}: ${data.amount}`
             });
 
             modal.classList.add('hidden');
@@ -219,9 +219,9 @@ class ConstructionModule {
         win.print();
     }
 
-    initRecords() {
-        const expenses = (window.Store.get(this.expenseKey) || []).map(i => ({ ...i, cat: 'expense' }));
-        const incomes = (window.Store.get(this.incomeKey) || []).map(i => ({ ...i, cat: 'income' }));
+    async initRecords() {
+        const expenses = (await window.Store.get(this.expenseKey) || []).map(i => ({ ...i, cat: 'expense' }));
+        const incomes = (await window.Store.get(this.incomeKey) || []).map(i => ({ ...i, cat: 'income' }));
         const all = [...expenses, ...incomes];
         all.sort((a, b) => new Date(b.date) - new Date(a.date));
 

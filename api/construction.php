@@ -28,11 +28,27 @@ if ($action === 'sites') {
 } elseif ($action === 'expenses') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data = json_decode(file_get_contents("php://input"), true);
+
+        // Handle project name to site_id conversion if needed
+        $site_id = $data['site_id'] ?? null;
+        if (!$site_id && !empty($data['project'])) {
+            $sStmt = $pdo->prepare("SELECT id FROM construction_sites WHERE name = ?");
+            $sStmt->execute([$data['project']]);
+            $site = $sStmt->fetch();
+            if ($site) {
+                $site_id = $site['id'];
+            } else {
+                $iStmt = $pdo->prepare("INSERT INTO construction_sites (name) VALUES (?)");
+                $iStmt->execute([$data['project']]);
+                $site_id = $pdo->lastInsertId();
+            }
+        }
+
         $stmt = $pdo->prepare("INSERT INTO construction_expenses (site_id, description, amount, date, payment_method, bank_account_id, external_bank_name, external_account_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         try {
             $stmt->execute([
-                $data['site_id'],
-                $data['description'],
+                $site_id,
+                $data['description'] ?? $data['desc'] ?? '',
                 $data['amount'],
                 $data['date'],
                 $data['payment_method'] ?? 'cash',
@@ -46,17 +62,33 @@ if ($action === 'sites') {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     } else {
-        $stmt = $pdo->query("SELECT * FROM construction_expenses ORDER BY date DESC");
+        $stmt = $pdo->query("SELECT ce.*, cs.name as project FROM construction_expenses ce LEFT JOIN construction_sites cs ON ce.site_id = cs.id ORDER BY ce.date DESC");
         echo json_encode($stmt->fetchAll());
     }
 } elseif ($action === 'income') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data = json_decode(file_get_contents("php://input"), true);
+
+        // Handle project name to site_id conversion if needed
+        $site_id = $data['site_id'] ?? null;
+        if (!$site_id && !empty($data['project'])) {
+            $sStmt = $pdo->prepare("SELECT id FROM construction_sites WHERE name = ?");
+            $sStmt->execute([$data['project']]);
+            $site = $sStmt->fetch();
+            if ($site) {
+                $site_id = $site['id'];
+            } else {
+                $iStmt = $pdo->prepare("INSERT INTO construction_sites (name) VALUES (?)");
+                $iStmt->execute([$data['project']]);
+                $site_id = $pdo->lastInsertId();
+            }
+        }
+
         $stmt = $pdo->prepare("INSERT INTO construction_income (site_id, description, amount, date, payment_method, bank_account_id) VALUES (?, ?, ?, ?, ?, ?)");
         try {
             $stmt->execute([
-                $data['site_id'],
-                $data['description'],
+                $site_id,
+                $data['description'] ?? $data['desc'] ?? '',
                 $data['amount'],
                 $data['date'],
                 $data['payment_method'] ?? 'cash',
@@ -68,7 +100,7 @@ if ($action === 'sites') {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     } else {
-        $stmt = $pdo->query("SELECT * FROM construction_income ORDER BY date DESC");
+        $stmt = $pdo->query("SELECT ci.*, cs.name as project FROM construction_income ci LEFT JOIN construction_sites cs ON ci.site_id = cs.id ORDER BY ci.date DESC");
         echo json_encode($stmt->fetchAll());
     }
 } elseif ($action === 'delete_site') {

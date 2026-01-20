@@ -681,8 +681,12 @@ class ExchangeModule {
         transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         transactions.forEach(tx => {
-            // FIX: Use customer_name or fallback to customer
-            const customerName = tx.customer_name || tx.customer || 'Unidentified';
+            // FIX: Use customer_name or fallback to customer. Handle explicit "undefined" string from bad parsing.
+            let cName = tx.customer_name || tx.customer;
+            if (!cName || cName === 'undefined' || cName === 'null') cName = 'Unidentified';
+            
+            let cID = tx.cid || tx.customer_id;
+            if (!cID || cID === 'undefined' || cID === 'null') cID = 'N/A';
 
             // MAIN ROW
             const tr = document.createElement('tr');
@@ -694,7 +698,7 @@ class ExchangeModule {
                 </td>
                 <td>${new Date(tx.date).toLocaleString()}</td>
                 <td><span style="font-weight:bold; color:${tx.type === 'buy' ? 'green' : 'red'}">${tx.type.toUpperCase()}</span></td>
-                <td>${customerName}</td>
+                <td>${cName}</td>
                 <td>${tx.currency_code}</td>
                 <td>${parseFloat(tx.amount).toFixed(2)}</td>
                 <td>${parseFloat(tx.rate).toFixed(4)}</td>
@@ -721,8 +725,8 @@ class ExchangeModule {
             trDetail.innerHTML = `
                 <td colspan="${isAdmin ? 9 : 8}" style="padding:15px 20px;">
                     <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:20px;">
-                        <div><strong>Full Name:</strong> ${customerName}</div>
-                        <div><strong>ID Number:</strong> ${tx.cid || tx.customer_id || 'N/A'}</div>
+                        <div><strong>Full Name:</strong> ${cName}</div>
+                        <div><strong>ID Number:</strong> ${cID}</div>
                         <div><strong>Payment Method:</strong> ${paymentInfo}</div>
                         ${tx.description ? `<div><strong>Notes:</strong> ${tx.description}</div>` : ''}
                     </div>

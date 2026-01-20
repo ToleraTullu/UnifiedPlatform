@@ -161,16 +161,19 @@ class ConstructionModule {
 
     // --- Dashboard ---
     async renderDashboard() {
+        console.log("Rendering Construction Module Dashboard (js/construction.js)");
         const expenses = await window.Store.get(this.expKey) || [];
         const incomes = await window.Store.get(this.incKey) || [];
 
-        const totExp = expenses.reduce((a, c) => a + c.amount, 0);
-        const totInc = incomes.reduce((a, c) => a + c.amount, 0);
+        const totExp = expenses.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
+        const totInc = incomes.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
         const bal = totInc - totExp;
 
+        console.log("Calculated Totals (Dashboard):", { totExp, totInc, bal });
+
         // Calculate Credit stats
-        const credExp = expenses.filter(e => e.payment_method === 'credit').reduce((a, c) => a + c.amount, 0);
-        const credInc = incomes.filter(i => i.payment_method === 'credit').reduce((a, c) => a + c.amount, 0);
+        const credExp = expenses.filter(e => e.payment_method === 'credit').reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
+        const credInc = incomes.filter(i => i.payment_method === 'credit').reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
 
         const setTxt = (id, val) => {
             const el = document.getElementById(id);
@@ -187,8 +190,8 @@ class ConstructionModule {
     async updateStats() {
         const expenses = await window.Store.get(this.expKey) || [];
         const incomes = await window.Store.get(this.incKey) || [];
-        const totExp = expenses.reduce((a, c) => a + c.amount, 0);
-        const totInc = incomes.reduce((a, c) => a + c.amount, 0);
+        const totExp = expenses.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
+        const totInc = incomes.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
 
         const el = document.getElementById('stat-construction');
         if (el) el.textContent = (totInc - totExp).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
@@ -461,7 +464,7 @@ class ConstructionModule {
                     ${tx.description.length > 30 ? tx.description.substring(0, 30) + '...' : tx.description}
                 </td>
                 <td style="color:${color}; font-weight:600">
-                    ${tx.cat === 'income' ? '+' : '-'}${(tx.amount || 0).toFixed(2)}
+                    ${tx.cat === 'income' ? '+' : '-'}${(parseFloat(tx.amount) || 0).toFixed(2)}
                 </td>
                 ${isAdmin ? `<td><button class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="window.ConstructionModule.deleteTransaction(${tx.id}, '${tx.cat}')">Delete</button></td>` : ''}
             `;

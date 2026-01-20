@@ -51,7 +51,7 @@ class PharmacyModule {
         const todayStr = new Date().toISOString().split('T')[0];
         const todaySales = sales
             .filter(s => (s.date && s.date.startsWith(todayStr)))
-            .reduce((acc, curr) => acc + curr.total, 0);
+            .reduce((acc, curr) => acc + (parseFloat(curr.total_amount) || parseFloat(curr.total) || 0), 0);
 
         // Low Stock (< 10)
         const lowStock = stock.filter(i => i.qty < 10).length;
@@ -61,7 +61,7 @@ class PharmacyModule {
         // Credit Sales (Outstanding)
         const creditSales = sales
             .filter(s => s.payment_method === 'credit')
-            .reduce((acc, curr) => acc + curr.total, 0);
+            .reduce((acc, curr) => acc + (parseFloat(curr.total_amount) || parseFloat(curr.total) || 0), 0);
         document.getElementById('ph-credit-sales').textContent = creditSales.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
         document.getElementById('ph-low-stock').textContent = lowStock;
@@ -72,7 +72,7 @@ class PharmacyModule {
     async updateStats() {
         // Global
         const sales = await window.Store.get(this.salesKey) || [];
-        const total = sales.reduce((a, c) => a + c.total, 0);
+        const total = sales.reduce((a, c) => a + (parseFloat(c.total_amount) || parseFloat(c.total) || 0), 0);
         const el = document.getElementById('stat-pharmacy');
         if (el) el.textContent = total.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
     }
@@ -598,7 +598,7 @@ class PharmacyModule {
                 </td>
                 <td>${new Date(s.date).toLocaleString()}</td>
                 <td>${itemNames}</td>
-                <td>$${parseFloat(s.total).toFixed(2)}</td>
+                <td>$${parseFloat(s.total_amount || s.total || 0).toFixed(2)}</td>
                 ${isAdmin ? `<td><button class="btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="window.PharmacyModule.deleteSale(${s.id})">Delete</button></td>` : ''}
             `;
             tbody.appendChild(tr);

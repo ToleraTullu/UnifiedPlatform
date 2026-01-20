@@ -405,15 +405,15 @@ class App {
         // Let's use: Pharmacy Sales + Construction Balance + (Exchange Volume * 0.01)
 
         const exTx = await window.Store.get('exchange_transactions') || [];
-        const exVol = exTx.reduce((a, c) => a + (c.amount * c.rate), 0);
+        const exVol = exTx.reduce((a, c) => a + (parseFloat(c.amount) || 0) * (parseFloat(c.rate) || 0), 0);
         const exProfit = exVol * 0.02; // Assume 2% spread revenue
 
         const phTx = await window.Store.get('pharmacy_sales') || [];
-        const phRev = phTx.reduce((a, c) => a + c.total, 0); // Revenue, not profit, but approx for now
+        const phRev = phTx.reduce((a, c) => a + (parseFloat(c.total_amount) || parseFloat(c.total) || 0), 0);
 
         const coExp = await window.Store.get('construction_expenses') || [];
         const coInc = await window.Store.get('construction_income') || [];
-        const coBal = coInc.reduce((a, c) => a + c.amount, 0) - coExp.reduce((a, c) => a + c.amount, 0);
+        const coBal = coInc.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0) - coExp.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
 
         const netProfit = exProfit + phRev + coBal;
 

@@ -7,9 +7,15 @@ class ConstructionModule {
         this.incomeKey = 'construction_income';
     }
 
+<<<<<<< HEAD
     async initDashboard() {
         const expenses = await window.Store.get(this.expenseKey) || [];
         const incomes = await window.Store.get(this.incomeKey) || [];
+=======
+    initDashboard() {
+        const expenses = window.Store.get(this.expenseKey) || [];
+        const incomes = window.Store.get(this.incomeKey) || [];
+>>>>>>> e21c58b1484587c61e5c0ad91e5412a49577fb22
         const totExp = expenses.reduce((a, c) => a + parseFloat(c.amount || 0), 0);
         const totInc = incomes.reduce((a, c) => a + parseFloat(c.amount || 0), 0);
 

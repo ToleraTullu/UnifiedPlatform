@@ -252,8 +252,11 @@ class Analytics {
         const items = {};
         phSales.forEach(s => {
             (s.items || []).forEach(it => {
-                if(!items[it.name]) items[it.name] = 0;
-                items[it.name] += it.price * it.qty;
+                const itemName = it.item_name || it.name || 'Unknown';
+                const price = parseFloat(it.unit_price_at_sale || it.price) || 0;
+                const qty = parseFloat(it.quantity_sold || it.qty) || 0;
+                if(!items[itemName]) items[itemName] = 0;
+                items[itemName] += price * qty;
             });
         });
 

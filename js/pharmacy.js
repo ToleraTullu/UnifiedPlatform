@@ -588,7 +588,7 @@ class PharmacyModule {
         sales.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         sales.forEach(s => {
-            const itemNames = (s.items || []).map(i => `${i.name} (x${i.qty})`).join(', ');
+            const itemNames = (s.items || []).map(i => `${i.item_name || i.name} (x${i.quantity_sold || i.qty})`).join(', ');
             
             // Main Row
             const tr = document.createElement('tr');
@@ -611,8 +611,8 @@ class PharmacyModule {
             // Build Item List for Detail View
             const itemListHtml = (s.items || []).map(i => `
                 <div style="display:flex; justify-content:space-between; border-bottom:1px dashed #eee; padding:4px 0;">
-                    <span>${i.name}</span>
-                    <span>${i.qty || 0} ${i.unit || 'Items'} x $${(i.price || 0).toFixed(2)} = $${((i.qty || 0) * (i.price || 0)).toFixed(2)}</span>
+                    <span>${i.item_name || i.name}</span>
+                    <span>${i.quantity_sold || i.qty || 0} ${i.unit_sold_as || i.unit || 'Items'} x $${(i.unit_price_at_sale || i.price || 0).toFixed(2)} = $${((i.quantity_sold || i.qty || 0) * (i.unit_price_at_sale || i.price || 0)).toFixed(2)}</span>
                 </div>
             `).join('');
 

@@ -451,7 +451,7 @@ class App {
         const exTx = await window.Store.get('exchange_transactions') || [];
         activities = activities.concat(exTx.map(t => ({
             time: t.date,
-            desc: `Exchange: ${t.type.toUpperCase()} ${t.currency_code} ${parseFloat(t.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`,
+            desc: `Exchange: ${t.type.toUpperCase()} ${t.currency_code} ${(parseFloat(t.amount) || 0).toLocaleString(undefined, {minimumFractionDigits:2})}`,
             type: 'exchange'
         })));
 
@@ -459,7 +459,7 @@ class App {
         const phTx = await window.Store.get('pharmacy_sales') || [];
         activities = activities.concat(phTx.map(t => ({
             time: t.date ? t.date : new Date().toISOString(), // fallback
-            desc: `Pharmacy: Sale of ${t.total.toLocaleString(undefined, {style: 'currency', currency: 'USD'})}`,
+            desc: `Pharmacy: Sale of ${(parseFloat(t.total_amount) || parseFloat(t.total) || 0).toLocaleString(undefined, {style: 'currency', currency: 'USD'})}`,
             type: 'pharmacy'
         })));
 
@@ -467,15 +467,15 @@ class App {
         const coExp = await window.Store.get('construction_expenses') || [];
         const coInc = await window.Store.get('construction_income') || [];
         activities = activities.concat(coExp.map(t => ({
-            time: t.date, desc: `Construction: Expense - ${t.description} ($${t.amount.toFixed(2)})`, type: 'construction'
+            time: t.date, desc: `Construction: Expense - ${t.description} ($${(parseFloat(t.amount) || 0).toFixed(2)})`, type: 'construction'
         })));
         activities = activities.concat(coInc.map(t => ({
-            time: t.date, desc: `Construction: Income - ${t.description} ($${t.amount.toFixed(2)})`, type: 'construction'
+            time: t.date, desc: `Construction: Income - ${t.description} ($${(parseFloat(t.amount) || 0).toFixed(2)})`, type: 'construction'
         })));
 
         // Sort & Slice
         activities.sort((a, b) => new Date(b.time) - new Date(a.time));
-        const recent = activities.slice(0, 10);
+        const recent = activities.slice(0, 20); // Show 20 most recent activities
 
         streamContainer.innerHTML = '';
         recent.forEach(act => {

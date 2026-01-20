@@ -85,6 +85,9 @@ const INIT_KEYS = {
     EUR: { buy: 0.9, sell: 0.92 },
     GBP: { buy: 0.8, sell: 0.82 }
   },
+<<<<<<< HEAD
+>>>>>>> parent of 6fe3653 (Merge branch 'main' into mainuni)
+=======
 >>>>>>> parent of 6fe3653 (Merge branch 'main' into mainuni)
 };
 

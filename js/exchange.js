@@ -422,6 +422,9 @@ class ExchangeModule {
                         <label style="display:flex; align-items:center; gap:8px; font-weight:normal; cursor:pointer;">
                             <input type="radio" name="payment_method" value="bank" style="width:18px; height:18px;"> Bank Transfer
                         </label>
+                        <label style="display:flex; align-items:center; gap:8px; font-weight:normal; cursor:pointer;">
+                            <input type="radio" name="payment_method" value="credit" style="width:18px; height:18px;"> Credit
+                        </label>
                     </div>
                 </div>
 

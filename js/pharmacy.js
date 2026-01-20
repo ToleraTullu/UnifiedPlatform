@@ -67,6 +67,7 @@ class PharmacyModule {
         document.getElementById('ph-low-stock').textContent = lowStock;
 
         this.updateStats(); // Also sync global
+        this.renderWeeklyChart(); // Render weekly trend chart
     }
 
     async updateStats() {
@@ -75,6 +76,78 @@ class PharmacyModule {
         const total = sales.reduce((a, c) => a + (parseFloat(c.total_amount) || parseFloat(c.total) || 0), 0);
         const el = document.getElementById('stat-pharmacy');
         if (el) el.textContent = total.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+    }
+
+    async renderWeeklyChart() {
+        const canvas = document.getElementById('pharmacy-weekly-chart');
+        if (!canvas) return;
+
+        // Wait for Chart.js to load (it's loaded by analytics)
+        if (!window.Chart) {
+            setTimeout(() => this.renderWeeklyChart(), 500);
+            return;
+        }
+
+        const sales = await window.Store.get(this.salesKey) || [];
+        const weeks = 8;
+        const labels = [];
+        const data = [];
+
+        const now = new Date();
+        
+        for (let i = weeks - 1; i >= 0; i--) {
+            const weekEnd = new Date(now.getTime() - (i * 7 * 24 * 60 * 60 * 1000));
+            const weekStart = new Date(weekEnd.getTime() - (6 * 24 * 60 * 60 * 1000));
+            
+            // Format label as "MMM DD"
+            labels.push(weekEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+            
+            // Calculate sales for this week
+            const weekSales = sales.filter(s => {
+                const saleDate = new Date(s.date);
+                return saleDate >= weekStart && saleDate <= weekEnd;
+            }).reduce((sum, s) => sum + (parseFloat(s.total_amount) || parseFloat(s.total) || 0), 0);
+            
+            data.push(weekSales);
+        }
+
+        // Destroy existing chart if it exists
+        if (this.weeklyChart) this.weeklyChart.destroy();
+
+        this.weeklyChart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Weekly Sales',
+                    data: data,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `Sales: $${context.parsed.y.toFixed(2)}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => '$' + value.toLocaleString()
+                        }
+                    }
+                }
+            }
+        });
     }
 
     // --- POS ---

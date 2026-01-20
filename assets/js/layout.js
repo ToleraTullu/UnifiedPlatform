@@ -169,7 +169,7 @@ class Layout {
             if (hasAccess(section.roles)) {
                 if (section.header) {
                     const h = document.createElement('li');
-                    h.className = 'menu-category';
+                    h.className = 'menu-category'; 
                     h.textContent = section.header;
                     menuCtx.appendChild(h);
                 }
@@ -261,16 +261,3 @@ class Layout {
         // Stub
     }
 }
-
-// Auto-initialize on MPA pages
-document.addEventListener('DOMContentLoaded', () => {
-    // Only auto-init if we are NOT on index.html and NOT on a page that handles its own layout (like dashboard.html which is SPA-like)
-    // However, the current MPA pages (modules/* and admin/*) all need this.
-    // We check if a Layout instance already exists or if we should create one.
-    if (!window.currentLayout && !window.location.href.includes('dashboard.html') && !window.location.href.endsWith('index.html')) {
-        window.currentLayout = new Layout();
-        window.currentLayout.ensureLayoutContainers();
-        window.currentLayout.renderSidebar();
-        window.currentLayout.renderTopbar();
-    }
-});

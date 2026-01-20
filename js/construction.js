@@ -101,6 +101,8 @@ class ConstructionModule {
 
             await this.saveSite({ name, status });
 
+
+
             UI.success('Site Added Successfully');
             close();
             this.renderSites(); // Refresh list if visible
@@ -162,17 +164,17 @@ class ConstructionModule {
         const expenses = await window.Store.get(this.expKey) || [];
         const incomes = await window.Store.get(this.incKey) || [];
 
-        const totExp = expenses.reduce((a, c) => a + parseFloat(c.amount || 0), 0);
-        const totInc = incomes.reduce((a, c) => a + parseFloat(c.amount || 0), 0);
+        const totExp = expenses.reduce((a, c) => a + c.amount, 0);
+        const totInc = incomes.reduce((a, c) => a + c.amount, 0);
         const bal = totInc - totExp;
 
         // Calculate Credit stats
-        const credExp = expenses.filter(e => e.payment_method === 'credit').reduce((a, c) => a + parseFloat(c.amount || 0), 0);
-        const credInc = incomes.filter(i => i.payment_method === 'credit').reduce((a, c) => a + parseFloat(c.amount || 0), 0);
+        const credExp = expenses.filter(e => e.payment_method === 'credit').reduce((a, c) => a + c.amount, 0);
+        const credInc = incomes.filter(i => i.payment_method === 'credit').reduce((a, c) => a + c.amount, 0);
 
         const setTxt = (id, val) => {
             const el = document.getElementById(id);
-            if (el) el.textContent = (val || 0).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+            if (el) el.textContent = val.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
         };
 
         setTxt('cons-dash-expense', totExp);
@@ -180,58 +182,16 @@ class ConstructionModule {
         setTxt('cons-dash-balance', bal);
         setTxt('cons-dash-credit-expense', credExp);
         setTxt('cons-dash-credit-income', credInc);
-
-        // Project breakdown
-        const projectStats = {};
-        expenses.forEach(exp => {
-            const proj = exp.site || exp.project || 'Unassigned';
-            if (!projectStats[proj]) projectStats[proj] = { exp: 0, inc: 0 };
-            projectStats[proj].exp += parseFloat(exp.amount || 0);
-        });
-        incomes.forEach(inc => {
-            const proj = inc.site || inc.project || 'Unassigned';
-            if (!projectStats[proj]) projectStats[proj] = { exp: 0, inc: 0 };
-            projectStats[proj].inc += parseFloat(inc.amount || 0);
-        });
-
-        const breakdownDiv = document.getElementById('projects-breakdown');
-        if (breakdownDiv) {
-            breakdownDiv.innerHTML = '';
-            Object.keys(projectStats).forEach(proj => {
-                const stats = projectStats[proj];
-                const balance = stats.inc - stats.exp;
-                const balanceColor = balance >= 0 ? 'var(--success)' : 'var(--danger)';
-                const div = document.createElement('div');
-                div.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border-color);';
-                div.innerHTML = `
-                <strong>${proj}</strong>
-                <div style="display: flex; gap: 20px; font-size: 0.9rem;">
-                    <span>Inc: <span style="color: var(--success);">$${stats.inc.toFixed(2)}</span></span>
-                    <span>Exp: <span style="color: var(--danger);">$${stats.exp.toFixed(2)}</span></span>
-                    <span style="font-weight:600">Net: <span style="color: ${balanceColor};">$${balance.toFixed(2)}</span></span>
-                </div>
-            `;
-                breakdownDiv.appendChild(div);
-            });
-            if (Object.keys(projectStats).length === 0) {
-                breakdownDiv.innerHTML = '<p class="empty-state">No financial data available for breakdown.</p>';
-            }
-        }
     }
 
     async updateStats() {
         const expenses = await window.Store.get(this.expKey) || [];
         const incomes = await window.Store.get(this.incKey) || [];
-        const totExp = expenses.reduce((a, c) => a + parseFloat(c.amount || 0), 0);
-        const totInc = incomes.reduce((a, c) => a + parseFloat(c.amount || 0), 0);
+        const totExp = expenses.reduce((a, c) => a + c.amount, 0);
+        const totInc = incomes.reduce((a, c) => a + c.amount, 0);
 
         const el = document.getElementById('stat-construction');
         if (el) el.textContent = (totInc - totExp).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
-
-        // Re-render dashboard if visible
-        if (!document.getElementById('view-construction-dashboard').classList.contains('hidden')) {
-            this.renderDashboard();
-        }
     }
 
     // --- Forms ---
@@ -341,15 +301,15 @@ class ConstructionModule {
         pform.onsubmit = async (e) => {
             e.preventDefault();
             const pfd = new FormData(pform);
-            const siteId = type === 'expense' ? 'exp-site' : 'inc-site';
             const descId = type === 'expense' ? 'exp-desc' : 'inc-desc';
             const amtId = type === 'expense' ? 'exp-amount' : 'inc-amount';
             const dateId = type === 'expense' ? 'exp-date' : 'inc-date';
+            const siteId = type === 'expense' ? 'exp-site' : 'inc-site';
 
             const data = {
                 site_id: document.getElementById(siteId).value,
                 description: document.getElementById(descId).value,
-                amount: parseFloat(document.getElementById(amtId).value) || 0,
+                amount: parseFloat(document.getElementById(amtId).value),
                 date: document.getElementById(dateId).value,
                 payment_method: pfd.get('payment_method'),
                 bank_account_id: pfd.get('bank_account_id'),
@@ -370,10 +330,6 @@ class ConstructionModule {
             const today = new Date().toISOString().split('T')[0];
             const dateEl = document.getElementById(dateId);
             if (dateEl) dateEl.value = today;
-
-            // Critical UI Refresh
-            this.renderRecords();
-            this.renderDashboard();
             this.populateSiteSelects();
         };
     }
@@ -396,8 +352,6 @@ class ConstructionModule {
         });
 
         this.updateStats();
-        // Sync Admin Overview
-        if (window.App) window.App.renderAdminDashboard();
         return newItem;
     }
 
@@ -451,7 +405,7 @@ class ConstructionModule {
         // Header Update
         const theadRow = document.querySelector('#view-construction-records thead tr');
         if (theadRow) {
-            if (!theadRow.querySelector('.th-details')) {
+             if (!theadRow.querySelector('.th-details')) {
                 const th = document.createElement('th');
                 th.className = 'th-details';
                 th.style.width = '40px';
@@ -482,7 +436,7 @@ class ConstructionModule {
         all.forEach(tx => {
             const color = tx.cat === 'income' ? 'var(--success)' : 'var(--danger)';
             const tr = document.createElement('tr');
-
+            
             // Payment Info Logic
             let paymentInfo = `<span style="text-transform:capitalize">${tx.payment_method || 'Cash'}</span>`;
             if (tx.payment_method === 'bank') {

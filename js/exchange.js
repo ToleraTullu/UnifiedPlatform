@@ -14,37 +14,25 @@ class ExchangeModule {
         document.addEventListener('click', (e) => {
             // Nav Buttons (handled by App usually, but if specific logic needed...)
             // Actually App handles navigation. We handle FUNCTION settings.
-
+            
             // Dashboard IDs
-            if (e.target.id === 'btn-nav-ex-buy') window.App.navigateTo('exchange-buy');
-            if (e.target.id === 'btn-nav-ex-sell') window.App.navigateTo('exchange-sell');
-            if (e.target.id === 'btn-nav-ex-holdings') window.App.navigateTo('exchange-holdings');
+            if(e.target.id === 'btn-nav-ex-buy') window.App.navigateTo('exchange-buy');
+            if(e.target.id === 'btn-nav-ex-sell') window.App.navigateTo('exchange-sell');
+            if(e.target.id === 'btn-nav-ex-holdings') window.App.navigateTo('exchange-holdings');
 
             // Forms
-            if (e.target.id === 'btn-record-buy') this.recordTransaction('buy');
-            if (e.target.id === 'btn-record-sell') this.recordTransaction('sell');
-            if (e.target.id === 'btn-save-rates') this.saveRates();
-            if (e.target.id === 'btn-update-rates') this.showRatesForm(); // Helper if needed
+            if(e.target.id === 'btn-record-buy') this.recordTransaction('buy');
+            if(e.target.id === 'btn-record-sell') this.recordTransaction('sell');
+            if(e.target.id === 'btn-save-rates') this.saveRates();
+            if(e.target.id === 'btn-update-rates') this.showRatesForm(); // Helper if needed
         });
-
-        // Dynamic Change Listeners for Rate Calculation
-        document.addEventListener('change', (e) => {
-            if (e.target.id === 'ex-buy-currency') this.updateRateDisplay('buy');
-            if (e.target.id === 'ex-sell-currency') this.updateRateDisplay('sell');
-            // Amount calc
-            if (e.target.id === 'ex-buy-amt') this.calculateTotal('buy');
-            if (e.target.id === 'ex-sell-amt') this.calculateTotal('sell');
-        });
-
-        document.addEventListener('input', (e) => {
-            if (e.target.id === 'ex-buy-amt') this.calculateTotal('buy');
-            if (e.target.id === 'ex-sell-amt') this.calculateTotal('sell');
-        });
+        
+        // Removed broken global listeners for calculation; renderForm handles this locally.
     }
 
     async init() {
-        // Async Init usually called by App on View Load
-        await this.updateStats();
+         // Async Init usually called by App on View Load
+         await this.updateStats();
     }
 
     onViewLoad(action) {
@@ -79,7 +67,7 @@ class ExchangeModule {
             USD: 10000,
             EUR: 5000,
             GBP: 5000,
-            LOCAL: 500000
+            LOCAL: 500000 
         };
 
         txs.forEach(tx => {
@@ -107,20 +95,17 @@ class ExchangeModule {
 
     async getCurrencies() {
         const data = await window.Store.get(this.ratesKey);
-
-        // If data is explicitly null or undefined, use fallback.
-        // If it's an empty array or object, it means the user might have cleared it (or it's newly initialized as empty).
-        // To allow clearing, we only use fallback if data is truly missing.
-        if (data === null || data === undefined) {
+        // Fallback for defaults if empty
+        if (!data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && Object.keys(data).length === 0)) {
             return [
                 { code: 'USD', buy: 1.0, sell: 1.02 },
                 { code: 'EUR', buy: 0.9, sell: 0.92 },
                 { code: 'GBP', buy: 0.8, sell: 0.82 }
             ];
         }
-
+        
         if (Array.isArray(data)) return data;
-
+        
         // Convert Object to Array
         return Object.entries(data).map(([code, rateData]) => ({
             code: code,
@@ -139,7 +124,6 @@ class ExchangeModule {
                 updated: new Date().toISOString()
             };
         });
-        // We save even if empty to distinguish from "missing"
         await window.Store.set(this.ratesKey, ratesObj);
     }
 
@@ -154,7 +138,7 @@ class ExchangeModule {
         // Better to just let them update naturally. 
         // But for "Global" stat which might take time:
         // UI.showLoader('#stat-exchange'); // Example usage if needed, but text replacement is usually instant here.
-
+        
         const transactions = await window.Store.get(this.txKey) || [];
 
         // Calculate totals by type and currency
@@ -207,7 +191,7 @@ class ExchangeModule {
         currentRatesArray.forEach(c => {
             rates[c.code] = { buy: c.buy, sell: c.sell };
         });
-
+        
         const currencyOptions = currencies.map(c => `<option value="${c.code}">${c.name} (${c.code})</option>`).join('');
 
         // Form Structure (No payment fields here anymore)
@@ -286,17 +270,17 @@ class ExchangeModule {
                 const suggested = type === 'buy' ? rates[code].buy : rates[code].sell;
                 rateInput.value = suggested;
                 document.getElementById('suggested-rate').textContent = `Suggested: ${suggested}`;
-
+                
                 if (type === 'sell') {
                     const vault = await this.calculateHoldings();
                     const available = vault[code] || 0;
-                    document.getElementById('suggested-rate').innerHTML += ` | <span style="color:var(--primary)">Max Available: ${available.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>`;
+                    document.getElementById('suggested-rate').innerHTML += ` | <span style="color:var(--primary)">Max Available: ${available.toLocaleString(undefined, {minimumFractionDigits:2})}</span>`;
                     amountInput.max = available;
                 } else if (type === 'buy') {
                     const vault = await this.calculateHoldings();
-                    document.getElementById('suggested-rate').innerHTML += ` | <span style="color:var(--primary)">Local Cash: ${vault.LOCAL.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>`;
+                    document.getElementById('suggested-rate').innerHTML += ` | <span style="color:var(--primary)">Local Cash: ${vault.LOCAL.toLocaleString(undefined, {minimumFractionDigits:2})}</span>`;
                 }
-
+                
                 calculateTotal();
             } else {
                 rateInput.value = '';
@@ -339,7 +323,7 @@ class ExchangeModule {
         const currency = fd.get('currency_code');
 
         title.textContent = 'Finalize Payment';
-
+        
         // Fetch eligible banks
         const allBanks = await window.Store.get('bank_accounts') || [];
         const sectorBanks = Array.isArray(allBanks) ? allBanks.filter(b => !b.sectors || b.sectors.includes('exchange') || b.sectors === 'all') : [];
@@ -397,7 +381,7 @@ class ExchangeModule {
             radio.addEventListener('change', () => {
                 bankSelector.style.display = radio.value === 'bank' ? 'block' : 'none';
                 const bankSelect = pform.querySelector('select[name="bank_account_id"]');
-                if (radio.value === 'bank') bankSelect.setAttribute('required', 'true');
+                if(radio.value === 'bank') bankSelect.setAttribute('required', 'true');
                 else bankSelect.removeAttribute('required');
             });
         });
@@ -412,7 +396,7 @@ class ExchangeModule {
     async recordTransaction(type, paymentData) {
         const fd = new FormData(this.activeForm);
         const submitBtn = this.activeForm.querySelector('button[type="submit"]');
-
+        
         const amount = parseFloat(fd.get('amount'));
         const code = (fd.get('currency_code') || '').toUpperCase();
         const rate = parseFloat(fd.get('rate'));
@@ -461,7 +445,7 @@ class ExchangeModule {
                 currency_code: code,
                 amount: amount,
                 rate: rate,
-                total: total.toFixed(2),
+                total_local: total.toFixed(2), 
                 description: fd.get('description'),
                 payment_method: paymentData.get('payment_method'),
                 bank_account_id: paymentData.get('bank_account_id'),
@@ -471,7 +455,7 @@ class ExchangeModule {
             };
 
             await window.Store.add(this.txKey, transaction);
-
+            
             // Log activity
             await window.Store.addActivityLog({
                 action_type: 'ADD',
@@ -561,14 +545,13 @@ class ExchangeModule {
     async renderRatesEditor() {
         const currencies = await this.getCurrencies();
         const container = document.getElementById('exchange-rates-form');
-        if (!container) return;
 
         let rows = currencies.map((c, idx) => `
             <tr>
                 <td><input type="text" value="${c.code}" disabled class="form-control" style="width:80px"></td>
                 <td><input type="number" step="0.0001" value="${c.buy}" id="buy-${idx}" class="form-control"></td>
                 <td><input type="number" step="0.0001" value="${c.sell}" id="sell-${idx}" class="form-control"></td>
-                <td><button type="button" class="btn-danger" onclick="window.ExchangeModule.deleteCurrency(${idx})" style="padding:5px 10px">×</button></td>
+                <td><button type="button" class="btn-danger btn-delete-currency" data-idx="${idx}" style="padding:5px 10px">×</button></td>
             </tr>
         `).join('');
 
@@ -585,45 +568,47 @@ class ExchangeModule {
                 <input type="text" id="new-code" placeholder="Code (e.g. JPY)" class="form-control">
                 <input type="number" id="new-buy" placeholder="Buy Rate" class="form-control" step="0.0001">
                 <input type="number" id="new-sell" placeholder="Sell Rate" class="form-control" step="0.0001">
-                <button type="button" class="btn-success" id="btn-add-currency" onclick="window.ExchangeModule.addCurrency()">Add</button>
+                <button type="button" class="btn-success" id="btn-add-currency">Add</button>
             </div>
 
             <button type="button" class="btn-primary" id="btn-save-rates">Save All Changes</button>
         `;
+
+        // Attach Listeners for this specific view render? 
+        // Or rely on global listener? Global listener covers IDs that are static-like.
+        // But dynamic table rows (delete) are harder with global simple ID checks.
+        // Let's add specific listeners here for the static buttons we just rendered.
+        
+        const btnAdd = document.getElementById('btn-add-currency');
+        if(btnAdd) btnAdd.onclick = () => this.addCurrency();
+
+        // Save Rate is handled by Global Listener 'btn-save-rates'
+        
+        // Dynamic Delete Buttons
+        const deletes = container.querySelectorAll('.btn-delete-currency');
+        deletes.forEach(btn => {
+             btn.onclick = (e) => this.deleteCurrency(e.target.dataset.idx);
+        });
     }
 
     async addCurrency() {
-        const codeInput = document.getElementById('new-code');
-        const buyInput = document.getElementById('new-buy');
-        const sellInput = document.getElementById('new-sell');
-
-        const code = codeInput.value.toUpperCase();
-        const buy = parseFloat(buyInput.value);
-        const sell = parseFloat(sellInput.value);
+        const code = document.getElementById('new-code').value.toUpperCase();
+        const buy = parseFloat(document.getElementById('new-buy').value);
+        const sell = parseFloat(document.getElementById('new-sell').value);
         if (!code || isNaN(buy) || isNaN(sell)) return UI.error('Invalid Input');
 
         const list = await this.getCurrencies();
-
-        // Prevent duplicates
-        if (list.some(c => c.code === code)) {
-            return UI.error('Currency code already exists!');
-        }
-
         list.push({ code, buy, sell });
         await this.setCurrencies(list);
-        await this.renderRatesEditor();
-        UI.success('Currency added!');
+        this.renderRatesEditor();
     }
 
     async deleteCurrency(index) {
-        if (!confirm('Are you sure you want to delete this currency?')) return;
+        if(!confirm('Are you sure you want to delete this currency?')) return;
         const list = await this.getCurrencies();
-        if (index >= 0 && index < list.length) {
-            list.splice(index, 1);
-            await this.setCurrencies(list);
-            await this.renderRatesEditor();
-            UI.success('Currency deleted.');
-        }
+        list.splice(index, 1);
+        await this.setCurrencies(list);
+        this.renderRatesEditor();
     }
 
     async saveRates() {
@@ -646,16 +631,16 @@ class ExchangeModule {
 
     // --- Records ---
     async renderRecords() {
-        const container = document.querySelector('#view-exchange-records .card');
+        const container = document.querySelector('#view-exchange-records .card'); 
         UI.showLoader(container);
 
         const transactions = await window.Store.get(this.txKey) || [];
         const bankAccounts = await window.Store.get('bank_accounts') || [];
         const tbody = document.getElementById('exchange-records-body');
         tbody.innerHTML = '';
-
+        
         const isAdmin = window.Auth && window.Auth.currentUser && window.Auth.currentUser.role === 'admin';
-
+        
         // Update header: Ensure 'Details' column is first
         const theadRow = document.querySelector('#view-exchange-records thead tr');
         if (theadRow) {
@@ -667,7 +652,7 @@ class ExchangeModule {
                 th.textContent = '';
                 theadRow.insertBefore(th, theadRow.firstChild);
             }
-
+            
             // Layout fix: Expand Actions check (existing logic preserved)
             if (isAdmin && !theadRow.querySelector('.th-action')) {
                 const th = document.createElement('th');
@@ -690,7 +675,7 @@ class ExchangeModule {
 
             // MAIN ROW
             const tr = document.createElement('tr');
-
+            
             // Initial render of Main Row
             tr.innerHTML = `
                 <td>
@@ -711,7 +696,7 @@ class ExchangeModule {
             const trDetail = document.createElement('tr');
             trDetail.style.display = 'none';
             trDetail.style.backgroundColor = 'var(--bg-body)'; // Slightly different bg
-
+            
             // Payment Details Logic
             let paymentInfo = `<span style="text-transform:capitalize">${tx.payment_method}</span>`;
             if (tx.payment_method === 'bank') {
@@ -744,13 +729,13 @@ class ExchangeModule {
                 btn.classList.toggle('btn-secondary', isHidden);
             });
         });
-
+        
         UI.hideLoader(container);
     }
-
+    
     async deleteTransaction(id) {
         if (!confirm('Are you sure you want to delete this transaction? This will affect your holdings.')) return;
-
+        
         const success = await window.Store.remove(this.txKey, id);
         if (success) {
             UI.success('Transaction deleted.');

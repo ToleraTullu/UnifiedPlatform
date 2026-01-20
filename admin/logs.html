@@ -59,6 +59,11 @@
     <script src="../assets/js/layout.js"></script>
     <script>
         function loadLogs() {
+            const layout = new Layout();
+            layout.ensureLayoutContainers();
+            layout.renderSidebar();
+            layout.renderTopbar();
+
             const logs = window.Store.getActivityLogs();
             const tbody = document.getElementById('logsTableBody');
 
@@ -76,7 +81,7 @@
                     'LOGOUT': '#718096'
                 };
                 const color = colors[log.action_type] || '#718096';
-
+                
                 return `
                     <tr>
                         <td style="font-size:0.85rem; color:var(--text-muted)">${new Date(log.timestamp).toLocaleString()}</td>

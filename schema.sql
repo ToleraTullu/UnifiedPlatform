@@ -41,7 +41,6 @@ CREATE TABLE IF NOT EXISTS exchange_transactions (
     amount DECIMAL(15, 2) NOT NULL,
     rate DECIMAL(10, 4) NOT NULL,
     total_local DECIMAL(15, 2) NOT NULL,
-    description TEXT,
     payment_method ENUM('cash', 'bank') DEFAULT 'cash',
     bank_account_id INT NULL,
     external_bank_name VARCHAR(100) NULL,
@@ -129,16 +128,6 @@ CREATE TABLE IF NOT EXISTS construction_income (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (site_id) REFERENCES construction_sites(id),
     FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id)
-);
-
--- 11. Activity Logs
-CREATE TABLE IF NOT EXISTS activity_logs (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    action_type VARCHAR(50) NOT NULL,
-    module_name VARCHAR(50) NOT NULL,
-    details TEXT,
-    performed_by VARCHAR(50),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Initial Data Import (Optional)

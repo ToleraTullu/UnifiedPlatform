@@ -8,9 +8,9 @@ class ExchangeModule {
         this.ratesKey = 'exchange_rates';
     }
 
-    async initDashboard() {
-        const transactions = await window.Store.get(this.storeKey) || [];
-        const storedHoldings = await window.Store.get(this.holdingsKey) || null;
+    initDashboard() {
+        const transactions = window.Store.get(this.storeKey) || [];
+        const storedHoldings = window.Store.get(this.holdingsKey) || null;
 
         const now = new Date();
         const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
@@ -147,7 +147,7 @@ class ExchangeModule {
         });
     }
 
-    async initForm(type) {
+    initForm(type) {
         let form;
         if (type === 'buy') form = document.getElementById('exchange-buy-form');
         else if (type === 'sell') form = document.getElementById('exchange-sell-form');
@@ -159,7 +159,7 @@ class ExchangeModule {
         }
 
         // Populate currency dropdown from admin rates settings (supports buy_rate and sell_rate)
-        const rates = await window.Store.get(this.ratesKey) || null;
+        const rates = window.Store.get(this.ratesKey) || null;
         const currencySelect = form.querySelector('select[name="currency"]');
         if (currencySelect) {
             currencySelect.innerHTML = '';
@@ -178,10 +178,9 @@ class ExchangeModule {
             }
 
             // when a currency is selected update rate input with current configured rate
-            currencySelect.addEventListener('change', async () => {
+            currencySelect.addEventListener('change', () => {
                 const sel = currencySelect.value;
-                const allRates = await window.Store.get(this.ratesKey) || {};
-                const cfg = allRates[sel] || {};
+                const cfg = (window.Store.get(this.ratesKey) || {})[sel] || {};
                 if (cfg) {
                     // prefer explicit buy_rate/sell_rate depending on form type
                     if (form.rate) form.rate.value = (type === 'buy' ? (cfg.buy_rate || cfg.rate) : (cfg.sell_rate || cfg.rate)) || '';
@@ -192,8 +191,7 @@ class ExchangeModule {
             });
 
             // set initial rate and badge
-            const initRates = await window.Store.get(this.ratesKey) || {};
-            const initCfg = initRates[currencySelect.value] || {};
+            const initCfg = (window.Store.get(this.ratesKey) || {})[currencySelect.value] || {};
             if (initCfg && form.rate) form.rate.value = (type === 'buy' ? (initCfg.buy_rate || initCfg.rate) : (initCfg.sell_rate || initCfg.rate)) || '';
             const badgeInit = document.getElementById('configured-rate-badge');
             if (badgeInit) badgeInit.textContent = `Configured: ${((type==='buy'?initCfg.buy_rate:initCfg.sell_rate)||initCfg.rate||0).toFixed(4)}`;
@@ -211,11 +209,11 @@ class ExchangeModule {
 
         // If admin edits the rate in the buy/sell form, persist it to the admin-configured rates
         if (rateInput && isAdmin) {
-            const persistRate = async () => {
+            const persistRate = () => {
                 const cur = form.currency ? form.currency.value : null;
                 const newRate = parseFloat(rateInput.value);
                 if (!cur || isNaN(newRate)) return;
-                const rates = await window.Store.get(this.ratesKey) || {};
+                const rates = window.Store.get(this.ratesKey) || {};
                 rates[cur] = rates[cur] || { created: new Date().toISOString() };
                 // store separately for buy and sell
                 if (type === 'buy') rates[cur].buy_rate = newRate;
@@ -223,7 +221,7 @@ class ExchangeModule {
                 // keep a fallback generic rate for backward compatibility
                 rates[cur].rate = newRate;
                 rates[cur].updated = new Date().toISOString();
-                await window.Store.set(this.ratesKey, rates);
+                window.Store.set(this.ratesKey, rates);
                 const badge = document.getElementById('configured-rate-badge'); if (badge) badge.textContent = `Configured: ${newRate.toFixed(4)}`;
             };
             rateInput.addEventListener('change', persistRate);
@@ -239,13 +237,13 @@ class ExchangeModule {
         form.amount.addEventListener('input', calc);
         form.rate.addEventListener('input', calc);
 
-        form.addEventListener('submit', async (e) => {
+        form.addEventListener('submit', (e) => {
             e.preventDefault();
             const currency = form.currency.value;
             const amount = parseFloat(form.amount.value);
 
             if (type === 'sell') {
-                const transactions = await window.Store.get(this.storeKey) || [];
+                const transactions = window.Store.get(this.storeKey) || [];
                 const netHolding = transactions.reduce((acc, tx) => {
                     if (tx.currency === currency) {
                         return acc + (tx.type === 'buy' ? tx.amount : -tx.amount);
@@ -270,20 +268,20 @@ class ExchangeModule {
             };
 
             // Persist transaction and update lot-based holdings (FIFO)
-            const saved = await window.Store.add(this.storeKey, data);
+            const saved = window.Store.add(this.storeKey, data);
 
             // Log the activity
             const actionType = 'Create';
             const moduleName = 'exchange';
             const details = `${type.toUpperCase()} ${amount} ${currency} at rate ${data.rate}`;
-            await window.Store.logActivity(actionType, moduleName, details);
+            window.Store.logActivity(actionType, moduleName, details);
 
             // Load or init holdings map
-            const holdings = await window.Store.get(this.holdingsKey) || {};
+            const holdings = window.Store.get(this.holdingsKey) || {};
             if (type === 'buy') {
                 if (!holdings[currency]) holdings[currency] = { lots: [] };
                 holdings[currency].lots.push({ amount: amount, rate: data.rate, date: data.date });
-                await window.Store.set(this.holdingsKey, holdings);
+                window.Store.set(this.holdingsKey, holdings);
             } else if (type === 'sell') {
                 if (!holdings[currency]) holdings[currency] = { lots: [] };
                 let remaining = amount;
@@ -297,13 +295,12 @@ class ExchangeModule {
                     if (lot.amount <= 0) holdings[currency].lots.shift();
                 }
                 // Save adjusted holdings
-                await window.Store.set(this.holdingsKey, holdings);
+                window.Store.set(this.holdingsKey, holdings);
 
                 // Attach realized lot info to saved transaction for auditing
-                const all = await window.Store.get(this.storeKey) || [];
-                // This might be risky if multiple concurrent transactions, but okay for single user usage
+                const all = window.Store.get(this.storeKey) || [];
                 const tx = all.find(t => t.date === saved.date && t.currency === saved.currency && t.amount === saved.amount && t.type === saved.type);
-                if (tx) { tx.realized = realized; await window.Store.set(this.storeKey, all); }
+                if (tx) { tx.realized = realized; window.Store.set(this.storeKey, all); }
             }
 
             alert('Transaction Saved!');
@@ -312,22 +309,22 @@ class ExchangeModule {
     }
 
     // ---- Exchange Rates Management (Admin) ----
-    async getRates() {
-        return await window.Store.get(this.ratesKey) || {};
+    getRates() {
+        return window.Store.get(this.ratesKey) || {};
     }
 
-    async setRates(rates) {
-        await window.Store.set(this.ratesKey, rates);
+    setRates(rates) {
+        window.Store.set(this.ratesKey, rates);
     }
 
-    async initManage() {
+    initManage() {
         // Admin page to add/update currencies and rates
         const form = document.querySelector('#rates-form');
         const tbody = document.querySelector('#rates-body');
         if (!form || !tbody) return;
 
-        const render = async () => {
-            const rates = await this.getRates();
+        const render = () => {
+            const rates = this.getRates();
             tbody.innerHTML = '';
             Object.entries(rates).forEach(([cur, data]) => {
                 const tr = document.createElement('tr');
@@ -345,35 +342,35 @@ class ExchangeModule {
             });
         };
 
-        await render();
+        render();
 
-        form.addEventListener('submit', async (e) => {
+        form.addEventListener('submit', (e) => {
             e.preventDefault();
             const cur = form.currency.value.trim().toUpperCase();
             const buy = parseFloat(form.buy_rate.value);
             const sell = parseFloat(form.sell_rate.value);
             if (!cur || (isNaN(buy) && isNaN(sell))) { alert('Provide valid currency and at least one rate'); return; }
-            const rates = await this.getRates();
+            const rates = this.getRates();
             rates[cur] = rates[cur] || { created: new Date().toISOString() };
             if (!isNaN(buy)) rates[cur].buy_rate = buy;
             if (!isNaN(sell)) rates[cur].sell_rate = sell;
             // keep fallback generic rate for compatibility
             rates[cur].rate = !isNaN(buy) ? buy : ( !isNaN(sell) ? sell : (rates[cur].rate || 0) );
             rates[cur].updated = new Date().toISOString();
-            await this.setRates(rates);
+            this.setRates(rates);
             form.currency.value = '';
             form.buy_rate.value = '';
             form.sell_rate.value = '';
-            await render();
+            render();
         });
 
         // delegate edit/delete
-        tbody.addEventListener('click', async (ev) => {
+        tbody.addEventListener('click', (ev) => {
             const btn = ev.target.closest('button');
             if (!btn) return;
             const cur = btn.dataset.cur;
             if (btn.classList.contains('edit-rate')) {
-                const rates = await this.getRates();
+                const rates = this.getRates();
                 const data = rates[cur] || {};
                 if (!data) return;
                 // populate form for edit
@@ -382,17 +379,17 @@ class ExchangeModule {
                 form.sell_rate.value = data.sell_rate || data.rate || '';
             } else if (btn.classList.contains('delete-rate')) {
                 if (!confirm(`Delete currency ${cur}?`)) return;
-                const rates = await this.getRates();
+                const rates = this.getRates();
                 delete rates[cur];
-                await this.setRates(rates);
-                await render();
+                this.setRates(rates);
+                render();
             }
         });
     }
 
     async initRecords() {
-        const transactions = await window.Store.get(this.storeKey) || [];
-        const bankAccounts = await window.Store.get('bank_accounts') || [];
+        const transactions = window.Store.get(this.storeKey) || [];
+        const bankAccounts = window.Store.get('bank_accounts') || [];
         const tbody = document.querySelector('tbody');
         if (!tbody) return;
 
@@ -474,12 +471,12 @@ class ExchangeModule {
             });
         });
     }
-    async initStock() {
-        const transactions = await window.Store.get(this.storeKey) || [];
+    initStock() {
+        const transactions = window.Store.get(this.storeKey) || [];
         const tbody = document.getElementById('holdings-body');
         if (!tbody) return;
 
-        const storedHoldings = await window.Store.get(this.holdingsKey) || null;
+        const storedHoldings = window.Store.get(this.holdingsKey) || null;
         tbody.innerHTML = '';
         if (storedHoldings) {
             Object.entries(storedHoldings).forEach(([cur, data]) => {
@@ -528,8 +525,8 @@ class ExchangeModule {
         if (modal) modal.querySelector('.close-modal').onclick = () => modal.classList.add('hidden');
     }
 
-    async showLots(currency) {
-        const holdings = await window.Store.get(this.holdingsKey) || {};
+    showLots(currency) {
+        const holdings = window.Store.get(this.holdingsKey) || {};
         const data = holdings[currency];
         const modal = document.getElementById('lots-modal');
         const body = document.getElementById('lots-modal-body');
@@ -558,17 +555,17 @@ class ExchangeModule {
         modal.classList.remove('hidden');
     }
 
-    async deleteTransaction(index) {
+    deleteTransaction(index) {
         if (!confirm('Are you sure you want to delete this transaction?')) return;
-        const transactions = await window.Store.get(this.storeKey) || [];
+        const transactions = window.Store.get(this.storeKey) || [];
         transactions.splice(index, 1);
-        await window.Store.set(this.storeKey, transactions);
-        await this.initRecords();
+        window.Store.set(this.storeKey, transactions);
+        this.initRecords();
     }
 
-    async clearAllTransactions() {
+    clearAllTransactions() {
         if (!confirm('Are you sure you want to clear ALL transactions? This action cannot be undone.')) return;
-        await window.Store.set(this.storeKey, []);
+        window.Store.set(this.storeKey, []);
         this.initRecords();
     }
 }

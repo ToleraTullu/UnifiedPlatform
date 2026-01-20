@@ -8,9 +8,9 @@ class PharmacyModule {
         this.cart = [];
     }
 
-    async initDashboard() {
-        const sales = await window.Store.get(this.salesKey) || [];
-        const stock = await window.Store.get(this.stockKey) || [];
+    initDashboard() {
+        const sales = window.Store.get(this.salesKey) || [];
+        const stock = window.Store.get(this.stockKey) || [];
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
 
@@ -61,7 +61,7 @@ class PharmacyModule {
         const stockValue = stock.reduce((acc, it) => acc + ((it.buy_price || 0) * (it.qty || 0)), 0);
 
         const fmt = (n) => n.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
-        if (document.getElementById('ph-today-sales')) document.getElementById('ph-today-sales').textContent = fmt(today);
+        document.getElementById('ph-today-sales').textContent = fmt(today);
         // Show Revenue and Items sold breakdown for weekly/monthly
         const weeklyItems = sales.filter(s => new Date(s.date) >= startOfWeek).reduce((acc, s) => acc + (s.items ? s.items.reduce((a,i)=>a + (i.qty||0),0) : 0), 0);
         const monthlyItems = sales.filter(s => new Date(s.date) >= startOfMonth).reduce((acc, s) => acc + (s.items ? s.items.reduce((a,i)=>a + (i.qty||0),0) : 0), 0);
@@ -71,7 +71,7 @@ class PharmacyModule {
         if (moEl) moEl.innerHTML = `<div style="font-size:0.9rem">Revenue: <strong>${fmt(monthly)}</strong></div><div style="font-size:0.9rem">Items: <strong>${monthlyItems}</strong></div>`;
         if (document.getElementById('ph-1m-sales')) document.getElementById('ph-1m-sales').textContent = fmt(m1);
         if (document.getElementById('ph-3m-sales')) document.getElementById('ph-3m-sales').textContent = fmt(m3);
-        if (document.getElementById('ph-low-stock')) document.getElementById('ph-low-stock').textContent = lowStock;
+        document.getElementById('ph-low-stock').textContent = lowStock;
         if (document.getElementById('ph-1m-profit')) document.getElementById('ph-1m-profit').textContent = fmt(profit1);
         if (document.getElementById('ph-3m-profit')) document.getElementById('ph-3m-profit').textContent = fmt(profit3);
         if (document.getElementById('ph-stock-value')) document.getElementById('ph-stock-value').textContent = fmt(stockValue);
@@ -117,43 +117,40 @@ class PharmacyModule {
     }
 
     // --- POS ---
-    async initPOS() {
-        await this.updatePosSelect();
+    initPOS() {
+        this.updatePosSelect();
         this.renderCart();
 
-        const addBtn = document.getElementById('add-btn');
-        if (addBtn) addBtn.onclick = () => this.addToCart();
+        document.getElementById('add-btn').onclick = () => this.addToCart();
         
         // Checkout Button - instead of direct checkout, show modal
         const checkoutBtn = document.getElementById('checkout-btn');
         const modal = document.getElementById('checkout-modal');
-        const closeBtn = modal ? modal.querySelector('.close-modal') : null;
+        const closeBtn = modal.querySelector('.close-modal');
         const checkoutForm = document.getElementById('checkout-form');
-        const pmRadios = checkoutForm ? checkoutForm.querySelectorAll('input[name="pm_method"]') : [];
+        const pmRadios = checkoutForm.querySelectorAll('input[name="pm_method"]');
         const bankDetails = document.getElementById('pm-bank-details');
 
-        if (checkoutBtn && modal) {
-            checkoutBtn.onclick = async () => {
-                if (this.cart.length === 0) return;
-                const total = this.cart.reduce((a, c) => a + (c.qty * c.price), 0);
-                document.getElementById('modal-total-due').textContent = `$${total.toFixed(2)}`;
-                
-                // Populate Banks
-                const allBanks = await window.Store.get('bank_accounts') || [];
-                const phBanks = allBanks.filter(b => {
-                    if(!b.sectors) return true;
-                    if(Array.isArray(b.sectors)) return b.sectors.includes('pharmacy');
-                    return b.sectors.includes('pharmacy') || b.sectors === 'all';
-                });
-                const bankSelect = checkoutForm.querySelector('select[name="pm_bank_id"]');
-                bankSelect.innerHTML = '<option value="">-- Select Bank --</option>' + 
-                    phBanks.map(b => `<option value="${b.id}">${b.bank_name} - ${b.account_number}</option>`).join('');
+        checkoutBtn.onclick = () => {
+            if (this.cart.length === 0) return;
+            const total = this.cart.reduce((a, c) => a + (c.qty * c.price), 0);
+            document.getElementById('modal-total-due').textContent = `$${total.toFixed(2)}`;
+            
+            // Populate Banks
+            const allBanks = window.Store.get('bank_accounts') || [];
+            const phBanks = allBanks.filter(b => {
+                if(!b.sectors) return true;
+                if(Array.isArray(b.sectors)) return b.sectors.includes('pharmacy');
+                return b.sectors.includes('pharmacy') || b.sectors === 'all';
+            });
+            const bankSelect = checkoutForm.querySelector('select[name="pm_bank_id"]');
+            bankSelect.innerHTML = '<option value="">-- Select Bank --</option>' + 
+                phBanks.map(b => `<option value="${b.id}">${b.bank_name} - ${b.account_number}</option>`).join('');
 
-                modal.classList.remove('hidden');
-            };
-        }
+            modal.classList.remove('hidden');
+        };
 
-        if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
+        closeBtn.onclick = () => modal.classList.add('hidden');
 
         pmRadios.forEach(r => {
             r.onchange = () => {
@@ -162,35 +159,31 @@ class PharmacyModule {
             };
         });
 
-        if (checkoutForm) {
-            checkoutForm.onsubmit = async (e) => {
-                e.preventDefault();
-                const fd = new FormData(checkoutForm);
-                const payment = {
-                    method: fd.get('pm_method'),
-                    bank_id: fd.get('pm_bank_id')
-                };
-
-                // Get bank name for snapshot
-                if (payment.method === 'bank') {
-                    const allBanks = await window.Store.get('bank_accounts') || [];
-                    const b = allBanks.find(x => x.id == payment.bank_id);
-                    if (b) payment.bank_name = b.bank_name;
-                }
-
-                await this.finalizeCheckout(payment);
-                modal.classList.add('hidden');
-                checkoutForm.reset();
-                bankDetails.style.display = 'none';
+        checkoutForm.onsubmit = (e) => {
+            e.preventDefault();
+            const fd = new FormData(checkoutForm);
+            const payment = {
+                method: fd.get('pm_method'),
+                bank_id: fd.get('pm_bank_id')
             };
-        }
+
+            // Get bank name for snapshot
+            if (payment.method === 'bank') {
+                const allBanks = window.Store.get('bank_accounts') || [];
+                const b = allBanks.find(x => x.id == payment.bank_id);
+                if (b) payment.bank_name = b.bank_name;
+            }
+
+            this.finalizeCheckout(payment);
+            modal.classList.add('hidden');
+            checkoutForm.reset();
+            bankDetails.style.display = 'none';
+        };
     }
 
-    async updatePosSelect() {
-        const items = await window.Store.get(this.stockKey) || [];
+    updatePosSelect() {
+        const items = window.Store.get(this.stockKey) || [];
         const select = document.getElementById('pos-item-select');
-        if (!select) return;
-
         select.innerHTML = '<option value="">-- Select Item --</option>';
         items.forEach(i => {
             const disabled = i.qty <= 0 ? 'disabled' : '';
@@ -224,10 +217,10 @@ class PharmacyModule {
         const priceBtn = document.getElementById('pos-show-prices-btn');
         const priceDisplay = document.getElementById('pos-price-display');
         if (priceBtn) {
-            priceBtn.onclick = async () => {
+            priceBtn.onclick = () => {
                 const id = parseInt(select.value);
                 if (!id) { if (priceDisplay) priceDisplay.textContent = 'Select an item first'; return; }
-                const p = await this.getPricesForItem(id);
+                const p = this.getPricesForItem(id);
                 if (!p) { if (priceDisplay) priceDisplay.textContent = 'Item not found'; return; }
                 if (p.itemsPerBox && p.itemsPerBox > 1) {
                     if (priceDisplay) priceDisplay.textContent = `Per item: $${p.perItem.toFixed(2)} — Per box (${p.itemsPerBox}): $${p.perBox.toFixed(2)}`;
@@ -238,7 +231,7 @@ class PharmacyModule {
         }
     }
 
-    async addToCart() {
+    addToCart() {
         const select = document.getElementById('pos-item-select');
         const qtyInput = document.getElementById('pos-qty');
         const qtyUnitSel = document.getElementById('pos-qty-unit');
@@ -249,7 +242,7 @@ class PharmacyModule {
 
         if (!itemId || qty <= 0) { alert('Invalid Item/Qty'); return; }
 
-        const items = await window.Store.get(this.stockKey);
+        const items = window.Store.get(this.stockKey);
         const stockItem = items.find(i => i.id === itemId);
 
         // Convert boxes input to base pieces if needed
@@ -288,8 +281,6 @@ class PharmacyModule {
     renderCart() {
         const list = document.getElementById('pos-cart-list');
         const totalEl = document.getElementById('pos-total');
-        if (!list) return;
-        
         list.innerHTML = '';
         let total = 0;
 
@@ -300,11 +291,11 @@ class PharmacyModule {
             const desc = item.description ? `<div style="color:#64748b; font-size:0.85rem">${item.description}</div>` : '';
             list.innerHTML += `<li><div><strong>${item.name}</strong> x${dispQty}${desc}</div><div>$${itemTotal.toFixed(2)} <button onclick="window.PharmacyModule.removeFromCart(${idx})" style="color:red;border:none;background:none;cursor:pointer">×</button></div></li>`;
         });
-        if (totalEl) totalEl.textContent = total.toFixed(2);
+        totalEl.textContent = total.toFixed(2);
     }
 
-    async getPricesForItem(itemId) {
-        const items = await window.Store.get(this.stockKey) || [];
+    getPricesForItem(itemId) {
+        const items = window.Store.get(this.stockKey) || [];
         const it = items.find(i => i.id === itemId);
         if (!it) return null;
         const sell = (it.sell_price !== undefined && it.sell_price !== null) ? it.sell_price : (it.buy_price * 1.5 || 0);
@@ -318,7 +309,7 @@ class PharmacyModule {
         this.renderCart();
     }
 
-    async finalizeCheckout(paymentData) {
+    finalizeCheckout(paymentData) {
         if (this.cart.length === 0) return;
         const total = this.cart.reduce((a, c) => a + (c.qty * c.price), 0);
         const sale = {
@@ -330,21 +321,21 @@ class PharmacyModule {
             bank_account_id: paymentData.bank_id,
             bank_name: paymentData.bank_name // Snapshot
         };
-        const savedSale = await window.Store.add(this.salesKey, sale);
+        const savedSale = window.Store.add(this.salesKey, sale);
 
-        const stock = await window.Store.get(this.stockKey);
+        const stock = window.Store.get(this.stockKey);
         this.cart.forEach(cartItem => {
             const stockItem = stock.find(i => i.id === cartItem.itemId);
             if (stockItem) stockItem.qty -= cartItem.qty;
         });
-        await window.Store.set(this.stockKey, stock);
+        window.Store.set(this.stockKey, stock);
 
         // Log
-        await window.Store.logActivity('Create', 'pharmacy', `Sale completed: $${sale.total.toFixed(2)} (${paymentData.method})`);
+        window.Store.logActivity('Create', 'pharmacy', `Sale completed: $${sale.total.toFixed(2)} (${paymentData.method})`);
 
         this.cart = [];
         this.renderCart();
-        await this.updatePosSelect();
+        this.updatePosSelect();
         
         if (confirm('Sale Completed! Print Receipt?')) {
             this.printReceipt(savedSale);
@@ -393,8 +384,8 @@ class PharmacyModule {
     }
 
     // --- Stock ---
-    async initStock() {
-        await this.renderStockList();
+    initStock() {
+        this.renderStockList();
 
         // Modal logic moved to page or handled here? 
         // Let's assume the page has the modal HTML and we just bind events
@@ -405,8 +396,8 @@ class PharmacyModule {
         const bulkList = document.getElementById('bulk-desc-list');
         const bulkSave = document.getElementById('bulk-desc-save');
         if (bulkBtn && bulkModal) {
-            bulkBtn.onclick = async () => {
-                const items = await window.Store.get(this.stockKey) || [];
+            bulkBtn.onclick = () => {
+                const items = window.Store.get(this.stockKey) || [];
                 bulkList.innerHTML = items.map(it => `
                     <div style="margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:6px;">
                         <div style="font-weight:600">${it.name} (ID: ${it.id})</div>
@@ -419,30 +410,27 @@ class PharmacyModule {
             };
         }
         if (bulkSave && bulkModal) {
-            bulkSave.onclick = async () => {
-                const items = await window.Store.get(this.stockKey) || [];
+            bulkSave.onclick = () => {
+                const items = window.Store.get(this.stockKey) || [];
                 const areas = bulkModal.querySelectorAll('textarea[data-item-id]');
                 areas.forEach(a => {
                     const id = parseInt(a.getAttribute('data-item-id'));
                     const idx = items.findIndex(i=>i.id===id);
                     if (idx!==-1) items[idx].description = a.value;
                 });
-                await window.Store.set(this.stockKey, items);
+                window.Store.set(this.stockKey, items);
                 bulkModal.classList.add('hidden');
                 this.renderStockList();
             };
         }
     }
 
-    async renderStockList() {
-        const items = await window.Store.get(this.stockKey) || [];
+    renderStockList() {
+        const items = window.Store.get(this.stockKey) || [];
         const tbody = document.getElementById('pharmacy-stock-body');
-        if (!tbody) return;
-        
         tbody.innerHTML = '';
         const now = new Date();
         const thirtyDaysFromNow = new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000));
-        
         items.forEach(item => {
             const tr = document.createElement('tr');
             // Check if item expires within 30 days
@@ -471,8 +459,8 @@ class PharmacyModule {
         });
     }
     
-    async openStockModal(itemId) {
-        const items = await window.Store.get(this.stockKey) || [];
+    openStockModal(itemId) {
+        const items = window.Store.get(this.stockKey) || [];
         const item = itemId ? items.find(i => i.id === itemId) : null;
         const modal = document.getElementById('modal-container');
 
@@ -494,12 +482,13 @@ class PharmacyModule {
 
         // Restrict dates to today only
         const today = new Date().toISOString().split('T')[0];
-        const mfg = document.getElementById('st-manuf'); if(mfg) { mfg.min = today; mfg.max = today; }
-        const exp = document.getElementById('st-expiry'); if(exp) { exp.min = today; exp.max = today; }
-        
+        document.getElementById('st-manuf').min = today;
+        document.getElementById('st-manuf').max = today;
+        document.getElementById('st-expiry').min = today;
+        document.getElementById('st-expiry').max = today;
         if (!item) { // For new items, set default to today
-            if(mfg) mfg.value = today;
-            if(exp) exp.value = today;
+            document.getElementById('st-manuf').value = today;
+            document.getElementById('st-expiry').value = today;
         }
 
         modal.classList.remove('hidden');
@@ -521,11 +510,11 @@ class PharmacyModule {
         document.getElementById('st-unit-type').disabled = !isAdmin;
         document.getElementById('st-pieces-per-box').disabled = !isAdmin;
         document.getElementById('st-batch').disabled = !isAdmin;
-        if(mfg) mfg.disabled = !isAdmin;
-        if(exp) exp.disabled = !isAdmin;
+        document.getElementById('st-manuf').disabled = !isAdmin;
+        document.getElementById('st-expiry').disabled = !isAdmin;
         if (document.getElementById('st-description')) document.getElementById('st-description').disabled = !isAdmin;
 
-        document.getElementById('stock-form').onsubmit = async (e) => {
+        document.getElementById('stock-form').onsubmit = (e) => {
             e.preventDefault();
             const fd = {
                 id: document.getElementById('st-id').value,
@@ -538,16 +527,16 @@ class PharmacyModule {
                 batch: document.getElementById('st-batch').value || '',
                 qty: parseFloat(document.getElementById('st-qty').value) || 0,
                 qty_unit: document.getElementById('st-qty-unit').value,
-                manuf_date: document.getElementById('st-manuf') ? document.getElementById('st-manuf').value : '',
-                expiry_date: document.getElementById('st-expiry') ? document.getElementById('st-expiry').value : ''
+                manuf_date: document.getElementById('st-manuf').value,
+                expiry_date: document.getElementById('st-expiry').value
             };
-            await this.saveStockItem(fd, item);
+            this.saveStockItem(fd, item);
             modal.classList.add('hidden');
         };
     }
 
-    async saveStockItem(formData, originalItem) {
-        let items = await window.Store.get(this.stockKey) || [];
+    saveStockItem(formData, originalItem) {
+        let items = window.Store.get(this.stockKey) || [];
         const currentUser = (window.Auth && window.Auth.currentUser) ? window.Auth.currentUser : null;
         const isAdmin = currentUser && currentUser.role === 'admin';
 
@@ -586,23 +575,21 @@ class PharmacyModule {
                 baseQty = (formData.qty || 0) * (formData.pieces_per_box || 1);
             }
             const newItem = { name: formData.name, description: formData.description || '', buy_price: formData.price, sell_price: formData.sell_price, qty: baseQty, unit_type: formData.unit_type || 'pcs', pieces_per_box: formData.pieces_per_box || 1, batch: formData.batch || '', manuf_date: formData.manuf_date || '', expiry_date: formData.expiry_date || '' };
-            await window.Store.add(this.stockKey, newItem);
-            items = await window.Store.get(this.stockKey);
+            window.Store.add(this.stockKey, newItem);
+            items = window.Store.get(this.stockKey);
         }
-        await window.Store.set(this.stockKey, items);
-        await this.renderStockList();
+        window.Store.set(this.stockKey, items);
+        this.renderStockList();
     }
 
-    async initRecords() {
-        const sales = await window.Store.get(this.salesKey) || [];
+    initRecords() {
+        const sales = window.Store.get(this.salesKey) || [];
         const tbody = document.querySelector('tbody');
-        if (!tbody) return;
-
         tbody.innerHTML = '';
         sales.sort((a, b) => new Date(b.date) - new Date(a.date));
         sales.forEach(s => {
             const tr = document.createElement('tr');
-            const itemsDesc = (s.items || []).map(i => {
+            const itemsDesc = s.items.map(i => {
                 const unit = i.orig_unit || (i.unit_type === 'liquid' ? 'L' : 'pcs');
                 const q = (i.orig_qty !== undefined && i.orig_qty !== null) ? i.orig_qty : i.qty;
                 const extra = i.description ? ` — ${i.description}` : '';

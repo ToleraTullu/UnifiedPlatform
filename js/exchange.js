@@ -196,7 +196,7 @@ class ExchangeModule {
 
         // Form Structure (No payment fields here anymore)
         const formHtml = `
-            <form id="transaction-form" data-type="${type}">
+            <form id="transaction-form">
                 <div class="form-group">
                     <label>Customer Full Name</label>
                     <input type="text" name="customer" required placeholder="Full Name" class="form-control">
@@ -209,7 +209,7 @@ class ExchangeModule {
                     <div class="col-md-6">
                         <div class="form-group">
                             <label>Currency</label>
-                            <select name="currency_code" id="ex-${type}-currency" class="form-control" required>
+                            <select name="currency_code" class="form-control" required>
                                 <option value="">Select Currency</option>
                                 ${currencyOptions}
                             </select>
@@ -218,7 +218,7 @@ class ExchangeModule {
                     <div class="col-md-6">
                         <div class="form-group">
                             <label>Amount</label>
-                            <input type="number" name="amount" id="ex-${type}-amt" class="form-control" step="0.01" required placeholder="0.00">
+                            <input type="number" name="amount" class="form-control" step="0.01" required placeholder="0.00">
                         </div>
                     </div>
                 </div>
@@ -251,7 +251,7 @@ class ExchangeModule {
         `;
 
         if (container.tagName === 'FORM') {
-            container.innerHTML = formHtml.replace('<form id="transaction-form" data-type="${type}">', '').replace('</form>', '');
+            container.innerHTML = formHtml.replace('<form id="transaction-form">', '').replace('</form>', '');
             this.activeForm = container;
         } else {
             container.innerHTML = formHtml;
@@ -296,10 +296,7 @@ class ExchangeModule {
         };
 
         amountInput.addEventListener('input', calculateTotal);
-        // Add change listener as well for robustness
-        amountInput.addEventListener('change', calculateTotal);
         rateInput.addEventListener('input', calculateTotal);
-        rateInput.addEventListener('change', calculateTotal);
 
         this.activeForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -440,8 +437,8 @@ class ExchangeModule {
                 id: Date.now(),
                 date: new Date().toISOString(),
                 type: type,
-                customer_name: fd.get('customer'),
-                customer_id: fd.get('cid'),
+                customer: fd.get('customer'),
+                cid: fd.get('cid'),
                 currency_code: code,
                 amount: amount,
                 rate: rate,
@@ -666,13 +663,6 @@ class ExchangeModule {
         transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         transactions.forEach(tx => {
-            // FIX: Use customer_name or fallback to customer. Handle explicit "undefined" string from bad parsing.
-            let cName = tx.customer_name || tx.customer;
-            if (!cName || cName === 'undefined' || cName === 'null') cName = 'Unidentified';
-            
-            let cID = tx.cid || tx.customer_id;
-            if (!cID || cID === 'undefined' || cID === 'null') cID = 'N/A';
-
             // MAIN ROW
             const tr = document.createElement('tr');
             
@@ -683,7 +673,7 @@ class ExchangeModule {
                 </td>
                 <td>${new Date(tx.date).toLocaleString()}</td>
                 <td><span style="font-weight:bold; color:${tx.type === 'buy' ? 'green' : 'red'}">${tx.type.toUpperCase()}</span></td>
-                <td>${cName}</td>
+                <td>${tx.customer}</td>
                 <td>${tx.currency_code}</td>
                 <td>${parseFloat(tx.amount).toFixed(2)}</td>
                 <td>${parseFloat(tx.rate).toFixed(4)}</td>
@@ -710,8 +700,8 @@ class ExchangeModule {
             trDetail.innerHTML = `
                 <td colspan="${isAdmin ? 9 : 8}" style="padding:15px 20px;">
                     <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:20px;">
-                        <div><strong>Full Name:</strong> ${cName}</div>
-                        <div><strong>ID Number:</strong> ${cID}</div>
+                        <div><strong>Full Name:</strong> ${tx.customer}</div>
+                        <div><strong>ID Number:</strong> ${tx.cid || 'N/A'}</div>
                         <div><strong>Payment Method:</strong> ${paymentInfo}</div>
                         ${tx.description ? `<div><strong>Notes:</strong> ${tx.description}</div>` : ''}
                     </div>

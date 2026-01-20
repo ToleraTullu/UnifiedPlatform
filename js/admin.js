@@ -46,7 +46,7 @@ class AdminModule {
                 </td>
                 <td style="text-align:right">
                     <button class="btn-secondary edit-user" data-user="${u.username}" style="padding:5px 10px; font-size:0.8rem;">Edit</button> 
-                    <button class="btn-danger delete-user" data-user="${u.username}" style="padding:5px 10px; font-size:0.8rem;">Delete</button>
+                    <button class="btn-danger delete-user" data-id="${u.id}" data-user="${u.username}" style="padding:5px 10px; font-size:0.8rem;">Delete</button>
                 </td>`;
             tbody.appendChild(tr);
         });
@@ -56,7 +56,8 @@ class AdminModule {
             const btn = ev.target.closest('button');
             if (!btn) return;
             const uname = btn.dataset.user;
-            if (btn.classList.contains('delete-user')) this.deleteUser(uname);
+            const id = btn.dataset.id;
+            if (btn.classList.contains('delete-user')) this.deleteUser(id, uname);
             else if (btn.classList.contains('edit-user')) this.editUser(uname);
         };
     }
@@ -67,36 +68,38 @@ class AdminModule {
         const fd = new FormData(form);
         const uname = fd.get('username').trim();
         const editMode = document.getElementById('edit-mode').value;
-        let users = await window.Store.get(this.usersKey) || [];
 
         if (editMode) {
-            const idx = users.findIndex(u => u.username === editMode);
-            if (idx !== -1) {
-                users[idx].name = fd.get('name');
-                users[idx].role = fd.get('role');
-                if (fd.get('password')) users[idx].password = fd.get('password');
-            }
-        } else {
-            if (users.some(u => u.username === uname)) return alert('Username already exists');
-            users.push({
-                username: uname,
-                password: fd.get('password'),
-                name: fd.get('name') || '',
-                role: fd.get('role')
-            });
+            alert('Edit User not yet implemented with MySQL backend.');
+            return;
         }
 
-        await window.Store.set(this.usersKey, users);
-        this.resetUserForm();
-        await this.renderUsers();
+        const newUser = {
+            username: uname,
+            password: fd.get('password'),
+            name: fd.get('name') || '',
+            role: fd.get('role')
+        };
+
+        const result = await window.Store.add(this.usersKey, newUser);
+        
+        if (result) {
+            this.resetUserForm();
+            await this.renderUsers();
+        } else {
+            alert('Failed to add user');
+        }
     }
 
-    async deleteUser(uname) {
+    async deleteUser(id, uname) {
         if (!confirm('Delete user @' + uname + '?')) return;
-        let users = await window.Store.get(this.usersKey) || [];
-        users = users.filter(u => u.username !== uname);
-        await window.Store.set(this.usersKey, users);
-        await this.renderUsers();
+        
+        const success = await window.Store.remove(this.usersKey, id);
+        if (success) {
+            this.renderUsers();
+        } else {
+            alert('Failed to delete user.');
+        }
     }
 
     async editUser(uname) {
@@ -156,9 +159,14 @@ class AdminModule {
         tbody.innerHTML = '';
 
         banks.forEach(b => {
-            const sectors = Array.isArray(b.sectors) ? b.sectors.map(s => {
-                const badgeClass = `badge-${s}`;
-                return `<span class="badge ${badgeClass}" style="margin-right:4px;">${s}</span>`;
+            // Normalize sectors (could be array or CSV string)
+            let sList = [];
+            if (Array.isArray(b.sectors)) sList = b.sectors;
+            else if (typeof b.sectors === 'string') sList = b.sectors.split(',');
+
+            const sectors = sList.length > 0 ? sList.map(s => {
+                const badgeClass = `badge-${s.trim()}`;
+                return `<span class="badge ${badgeClass}" style="margin-right:4px;">${s.trim()}</span>`;
             }).join('') : '<span class="text-muted">All Sectors</span>';
 
             const tr = document.createElement('tr');
@@ -193,33 +201,37 @@ class AdminModule {
         form.querySelectorAll('input[name="sector"]:checked').forEach(cb => sectors.push(cb.value));
 
         const hiddenId = document.getElementById('bank-id').value;
+        
+        if (hiddenId) {
+             alert('Edit Bank not yet implemented with MySQL backend.');
+             return;
+        }
+
         const bankObj = {
-            id: hiddenId ? parseInt(hiddenId) : Date.now(),
             bank_name: fd.get('bank_name'),
             account_number: fd.get('account_number'),
             account_holder: fd.get('account_holder'),
-            sectors: sectors.length > 0 ? sectors : ['exchange', 'pharmacy', 'construction']
+            sectors: sectors.length > 0 ? sectors.join(',') : 'all'
         };
 
-        let banks = await window.Store.get(this.banksKey) || [];
-        if (hiddenId) {
-            const idx = banks.findIndex(b => b.id == bankObj.id);
-            if (idx !== -1) banks[idx] = bankObj;
-        } else {
-            banks.push(bankObj);
-        }
+        const result = await window.Store.add(this.banksKey, bankObj);
 
-        await window.Store.set(this.banksKey, banks);
-        this.resetBankForm();
-        await this.renderBanks();
+        if (result) {
+            this.resetBankForm();
+            await this.renderBanks();
+        } else {
+           alert('Failed to add bank');
+        }
     }
 
     async deleteBank(id) {
         if (!confirm('Delete this bank account?')) return;
-        let banks = await window.Store.get(this.banksKey) || [];
-        banks = banks.filter(b => b.id !== id);
-        await window.Store.set(this.banksKey, banks);
-        await this.renderBanks();
+        const success = await window.Store.remove(this.banksKey, id);
+        if (success) {
+            this.renderBanks();
+        } else {
+             alert('Failed to delete bank account.');
+        }
     }
 
     async editBank(id) {
@@ -285,8 +297,8 @@ class AdminModule {
             const color = colors[log.action_type] || '#64748b';
             return `
                 <tr>
-                    <td style="font-size:0.85rem; color:var(--text-muted)">${new Date(log.timestamp).toLocaleString()}</td>
-                    <td style="font-weight:600">@${log.current_user}</td>
+                    <td style="font-size:0.85rem; color:var(--text-muted)">${new Date(log.created_at).toLocaleString()}</td>
+                    <td style="font-weight:600">@${log.performed_by}</td>
                     <td>
                         <span class="badge" style="background:${color}; color:white;">
                             ${log.action_type}

@@ -1,114 +1,175 @@
 /**
- * AsyncStore.js (Mock Implementation)
- * Replaces fetch-based Store with Promisified LocalStorage for environment without PHP server.
+ * DataStore.js
+ * Connectivity to PHP/MySQL Backend
  */
 
-const MOCK_USERS = [
-    { username: 'admin', password: '123', role: 'admin', name: 'Super Admin' },
-    { username: 'exchange', password: '123', role: 'exchange_user', name: 'Money Exchange Staff' },
-    { username: 'pharmacy', password: '123', role: 'pharmacy_user', name: 'Pharmacy Clerk' },
-    { username: 'construction', password: '123', role: 'construction_user', name: 'Site Manager' }
-];
+const API_BASE = 'api/';
 
-const INIT_KEYS = {
-    'unified_users': MOCK_USERS,
-    'exchange_transactions': [],
-    'exchange_rates': {},
-    'exchange_holdings': {},
-    'pharmacy_items': [
-        { id: 1, name: 'Paracetamol', buy_price: 10, sell_price: 15, qty: 100, unit_type: 'pcs', pieces_per_box: 1, manuf_date: '2024-01-01', expiry_date: '2026-01-01' },
-        { id: 2, name: 'Amoxicillin', buy_price: 25, sell_price: 40, qty: 50, unit_type: 'box', pieces_per_box: 10, manuf_date: '2023-06-01', expiry_date: '2025-06-01' },
-        { id: 3, name: 'Vitamin C', buy_price: 5, sell_price: 8, qty: 200, unit_type: 'pcs', pieces_per_box: 1, manuf_date: '2024-03-01', expiry_date: '2026-03-01' }
-    ],
-    'pharmacy_sales': [],
-    'construction_sites': [],
-    'construction_expenses': [],
-    'construction_income': [],
-    'bank_accounts': [],
-    'activity_logs': []
+const ENDPOINTS = {
+    'unified_users': 'users.php',
+    'exchange_transactions': 'exchange.php?action=transactions',
+    'exchange_rates': 'exchange.php?action=rates',
+    'pharmacy_items': 'pharmacy.php?action=stock',
+    'pharmacy_sales': 'pharmacy.php?action=sales',
+    'construction_sites': 'construction.php?action=sites',
+    'construction_expenses': 'construction.php?action=expenses',
+    'construction_income': 'construction.php?action=income',
+    'bank_accounts': 'bank_accounts.php',
+    'activity_logs': 'logs.php'
 };
 
-class AsyncStore {
+class DataStore {
     constructor() {
-        this.init();
-    }
-
-    async init() {
-        console.log('Store initialized in (Mock) Async Mode');
-        // Initialize mock data if not present
-        Object.entries(INIT_KEYS).forEach(([key, val]) => {
-            if (!localStorage.getItem(key)) {
-                localStorage.setItem(key, JSON.stringify(val));
-            }
-        });
-        return true;
+        console.log('Store initialized in MySQL Mode');
     }
 
     async get(key) {
-        // Simulate network delay
-        await new Promise(r => setTimeout(r, 50));
-        const data = localStorage.getItem(key);
-        // Special case for rates: return object, others array (mostly)
-        if (!data) return INIT_KEYS[key] || (key.includes('rates') ? {} : []);
-        return JSON.parse(data);
+        if (!ENDPOINTS[key]) {
+            console.warn(`Unknown Store Key: ${key}`);
+            return [];
+        }
+
+        let url = API_BASE + ENDPOINTS[key];
+        // Handle specific actions for GET if needed (most defaults are GET)
+        if (key === 'bank_accounts') url += '?action=list';
+        if (key === 'activity_logs') url += '?action=list';
+        if (key === 'unified_users') url += '?action=list';
+
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            return data;
+        } catch (e) {
+            console.error(`Failed to fetch ${key}:`, e);
+            return [];
+        }
     }
 
     async add(key, item) {
-        await new Promise(r => setTimeout(r, 50));
-        const list = await this.get(key) || [];
-        // Ensure it's an array
-        if (!Array.isArray(list)) {
-            console.error(`Cannot add to non-array key: ${key}`);
-            return false;
+        if (!ENDPOINTS[key]) return false;
+
+        let url = API_BASE + ENDPOINTS[key];
+        // Ensure action is explicitly set for some if the map didn't have it
+        if (key === 'bank_accounts') url += '?action=add';
+        if (key === 'activity_logs') url += '?action=add';
+        if (key === 'unified_users') url += '?action=add';
+        
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item)
+            });
+            
+            // Check for HTTP errors first
+            if (!res.ok) {
+                let errorMsg = `HTTP Error ${res.status}`;
+                try {
+                    const errData = await res.json();
+                    if (errData.message) errorMsg = errData.message;
+                } catch(e) {}
+                throw new Error(errorMsg);
+            }
+
+            const result = await res.json();
+            
+            // Handle Standardized Backend Response { success: true, data: ... }
+            if (result && result.success) {
+                return result.data || result;
+            }
+            // Handle Legacy or Error Response
+            if (result && result.success === false) {
+                 const msg = result.message || 'Unknown API Error';
+                 console.error('API Error:', msg);
+                 throw new Error(msg);
+            }
+            
+            // Fallback for endpoints we might have missed or are just returning data directly
+            return result; 
+        } catch (e) {
+            console.error(`Store.add failed for ${key}:`, e);
+            // Re-throw so the caller knows it failed!
+            throw e; 
         }
-        item.id = Date.now();
-        item.date = item.date || new Date().toISOString(); // Ensure date
-        list.push(item);
-        localStorage.setItem(key, JSON.stringify(list));
-        return item;
     }
 
     async remove(key, id) {
-        await new Promise(r => setTimeout(r, 50));
-        const list = await this.get(key) || [];
-        if (!Array.isArray(list)) return false;
+        let url = '';
+        if (key === 'bank_accounts') url = API_BASE + 'bank_accounts.php?action=delete';
+        else if (key === 'unified_users') url = API_BASE + 'users.php?action=delete';
+        else if (key === 'exchange_transactions') url = API_BASE + 'exchange.php?action=delete_transaction'; 
+        else if (key === 'construction_sites') url = API_BASE + 'construction.php?action=delete_site';
+        else if (key === 'construction_expenses') url = API_BASE + 'construction.php?action=delete_expense';
+        else if (key === 'construction_income') url = API_BASE + 'construction.php?action=delete_income';
+        else if (key === 'pharmacy_items') url = API_BASE + 'pharmacy.php?action=delete_stock';
+        else if (key === 'pharmacy_sales') url = API_BASE + 'pharmacy.php?action=delete_sale';
         
-        const newList = list.filter(item => item.id != id);
-        if (newList.length === list.length) return false; // No item removed
-        
-        localStorage.setItem(key, JSON.stringify(newList));
-        return true;
+        if (!url) {
+            console.warn(`Delete not implemented for ${key} in Store/API`);
+            return false;
+        }
+
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id })
+            });
+            const result = await res.json();
+            return result.success;
+        } catch (e) {
+            console.error(e);
+            return false;
+        }
     }
 
     async set(key, value) {
-        await new Promise(r => setTimeout(r, 50));
-        localStorage.setItem(key, JSON.stringify(value));
-        return true;
+        // Primarily for Exchange Rates
+        if (key === 'exchange_rates') {
+            const url = API_BASE + ENDPOINTS[key]; // exchange.php?action=rates
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(value)
+                });
+                const result = await res.json();
+                return result.success || (result && !result.error); // Handle varies
+            } catch (e) {
+                console.error(e);
+                return false;
+            }
+        }
+        return false;
     }
 
     async logActivity(action, module, details) {
         const log = {
-            id: Date.now(),
             action_type: action,
             module_name: module,
             details: details,
-            timestamp: new Date().toISOString(),
-            current_user: (JSON.parse(sessionStorage.getItem('active_user') || '{}')).username || 'system'
+            created_at: new Date().toISOString(),
+            performed_by: (JSON.parse(sessionStorage.getItem('active_user') || '{}')).username || 'system'
         };
+        // Use internal add to avoid recursive log if we were logging logs (which we aren't here)
         return await this.add('activity_logs', log);
     }
 
     async addActivityLog(log) {
         return await this.logActivity(log.action_type, log.module_name, log.details);
     }
-
-    async getActivityLogs(limit = null) {
-        // Simulate delay
-        await new Promise(r => setTimeout(r, 50));
-        const logs = await this.get('activity_logs') || [];
-        logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        return limit ? logs.slice(0, limit) : logs;
+    
+    // Helper to get raw logs if needed
+    async getActivityLogs(limit = 50) {
+        const url = API_BASE + `logs.php?action=list&limit=${limit}`;
+        try {
+            const res = await fetch(url);
+            return await res.json();
+        } catch (e) {
+            return [];
+        }
     }
 }
 
-window.Store = new AsyncStore();
+window.Store = new DataStore();

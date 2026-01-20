@@ -53,9 +53,9 @@ class ConstructionModule {
     async populateSiteSelects() {
         const sites = await window.Store.get(this.sitesKey) || [];
         // Only show Active sites in dropdown
-        const activeSites = sites.filter(s => s.status === 'Active');
+        const activeSites = sites.filter(s => s.status && s.status.toLowerCase() === 'active');
 
-        const opts = activeSites.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+        const opts = activeSites.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
         const defaultOpt = '<option value="" disabled selected>Select Site...</option>';
 
         const expSelect = document.getElementById('exp-site');
@@ -122,6 +122,8 @@ class ConstructionModule {
             return;
         }
 
+        const isAdmin = window.Auth && window.Auth.currentUser && window.Auth.currentUser.role === 'admin';
+
         tbody.innerHTML = sites.map(s => `
             <tr>
                 <td><strong>${s.name}</strong></td>
@@ -132,9 +134,21 @@ class ConstructionModule {
                 </td>
                 <td>
                     <button class="btn-secondary" style="padding:0.2rem 0.5rem; font-size: 0.8rem">Manage</button>
+                    ${isAdmin ? `<button class="btn-danger" onclick="window.ConstructionModule.deleteSite(${s.id})" style="padding:0.2rem 0.5rem; font-size: 0.8rem; margin-left:5px">Delete</button>` : ''}
                 </td>
             </tr>
         `).join('');
+    }
+
+    async deleteSite(id) {
+        if (!confirm('Are you sure you want to delete this site?')) return;
+        const success = await window.Store.remove(this.sitesKey, id);
+        if (success) {
+            UI.success('Site deleted.');
+            this.renderSites();
+        } else {
+             UI.error('Failed to delete site.');
+        }
     }
 
     getStatusColor(status) {
@@ -251,21 +265,24 @@ class ConstructionModule {
 
         const fd = new FormData(activeForm);
         const amount = parseFloat(fd.get('amount') || activeForm.querySelector('[name="amount"]')?.value || 0);
-        console.log(amount);
-        const site = fd.get('site') || activeForm.querySelector('select')?.value || 'N/A';
+
+        // Get Site Name for display (since value is now ID)
+        const siteSelect = activeForm.querySelector('select');
+        const siteName = siteSelect && siteSelect.selectedOptions[0] ? siteSelect.selectedOptions[0].text : 'N/A';
+        const siteId = fd.get('site') || siteSelect?.value;
 
         title.textContent = 'Finalize Payment';
 
         // Fetch eligible banks
         const allBanks = await window.Store.get('bank_accounts') || [];
-        const sectorBanks = allBanks.filter(b => !b.sectors || b.sectors.includes('construction') || b.sectors === 'all');
+        const sectorBanks = allBanks.filter(b => !b.sectors || (typeof b.sectors === 'string' ? b.sectors.includes('construction') : b.sectors.includes('construction')) || b.sectors === 'all');
         const bankOptions = sectorBanks.map(b => `<option value="${b.id}">${b.bank_name} - ${b.account_number}</option>`).join('');
 
         body.innerHTML = `
             <div style="margin-bottom:20px; padding:15px; background:var(--bg-input); border-radius:8px; text-align:center;">
                 <div style="font-size:0.9rem; color:var(--text-muted); text-transform:uppercase;">Total Amount to ${type === 'expense' ? 'PAY' : 'RECEIVE'}</div>
                 <div style="font-size:2rem; font-weight:800; color:var(--text-main);">${amount.toFixed(2)} <span style="font-size:1rem; font-weight:400;">USD</span></div>
-                <div style="font-size:0.9rem; margin-top:5px;">Site: ${site}</div>
+                <div style="font-size:0.9rem; margin-top:5px;">Site: ${siteName}</div>
             </div>
 
             <form id="payment-finalize-form">
@@ -330,7 +347,7 @@ class ConstructionModule {
             const dateId = type === 'expense' ? 'exp-date' : 'inc-date';
 
             const data = {
-                site: document.getElementById(siteId).value,
+                site_id: document.getElementById(siteId).value,
                 description: document.getElementById(descId).value,
                 amount: parseFloat(document.getElementById(amtId).value) || 0,
                 date: document.getElementById(dateId).value,
@@ -362,7 +379,14 @@ class ConstructionModule {
     }
 
     async saveTransaction(key, data) {
-        data.date = new Date(data.date).toISOString();
+        // Format date to YYYY-MM-DD HH:MM:SS for MySQL
+        const inputDate = new Date(data.date);
+        const now = new Date();
+        inputDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+        
+        // Manual formatting to ensure correct string result
+        const pad = (num) => num.toString().padStart(2, '0');
+        data.date = `${inputDate.getFullYear()}-${pad(inputDate.getMonth() + 1)}-${pad(inputDate.getDate())} ${pad(inputDate.getHours())}:${pad(inputDate.getMinutes())}:${pad(inputDate.getSeconds())}`;
         const newItem = await window.Store.add(key, data);
 
         await window.Store.addActivityLog({

@@ -50,7 +50,7 @@ class ConstructionModule {
                 const dateInput = document.getElementById(dateInputId);
                 if (dateInput) {
                     // dateInput.min = today; // Allow past dates
-                    // dateInput.max = today;
+                    dateInput.max = today; // Restrict future selection
                     dateInput.value = today; // Set default to today
                 }
                 break;
@@ -173,6 +173,14 @@ class ConstructionModule {
     // --- Dashboard ---
     async renderDashboard(dateFrom = null, dateTo = null) {
         console.log("Rendering Construction Module Dashboard (js/construction.js)");
+        
+        // Set max dates for filters
+        const today = new Date().toISOString().split('T')[0];
+        const dfInput = document.getElementById('cons-date-from');
+        const dtInput = document.getElementById('cons-date-to');
+        if (dfInput) dfInput.max = today;
+        if (dtInput) dtInput.max = today;
+
         const expenses = await window.Store.get(this.expKey) || [];
         const incomes = await window.Store.get(this.incKey) || [];
 

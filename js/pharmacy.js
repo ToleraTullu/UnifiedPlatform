@@ -55,6 +55,13 @@ class PharmacyModule {
 
     // --- Dashboard ---
     async renderDashboard(dateFrom = null, dateTo = null) {
+        // Set max dates for filters
+        const today = new Date().toISOString().split('T')[0];
+        const dfInput = document.getElementById('ph-date-from');
+        const dtInput = document.getElementById('ph-date-to');
+        if (dfInput) dfInput.max = today;
+        if (dtInput) dtInput.max = today;
+
         const sales = await window.Store.get(this.salesKey) || [];
         const stock = await window.Store.get(this.stockKey) || [];
 
@@ -348,7 +355,7 @@ class PharmacyModule {
             <form id="pharmacy-payment-form">
                 <div class="form-group">
                     <label>Date</label>
-                    <input type="date" name="date" class="form-control" required value="${new Date().toISOString().split('T')[0]}">
+                    <input type="date" name="date" class="form-control" required value="${new Date().toISOString().split('T')[0]}" max="${new Date().toISOString().split('T')[0]}">
                 </div>
                 <div class="form-group">
                     <label>Payment Method</label>
@@ -587,7 +594,7 @@ class PharmacyModule {
                 </div>
                 <div class="form-group">
                     <label>Manufacture Date</label>
-                    <input type="date" id="st-mfg" value="${item ? item.mfg_date || '' : ''}">
+                    <input type="date" id="st-mfg" value="${item ? item.mfg_date || '' : ''}" max="${new Date().toISOString().split('T')[0]}">
                 </div>
                 <div class="form-group">
                     <label>Expiry Date</label>

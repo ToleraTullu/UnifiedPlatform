@@ -141,6 +141,13 @@ class ExchangeModule {
 
     // --- Dashboard ---
     renderDashboard(dateFrom = null, dateTo = null) {
+        // Set max dates for filters
+        const today = new Date().toISOString().split('T')[0];
+        const dfInput = document.getElementById('ex-date-from');
+        const dtInput = document.getElementById('ex-date-to');
+        if (dfInput) dfInput.max = today;
+        if (dtInput) dtInput.max = today;
+
         const currencies = this.getCurrencies(); // Note: this is async but we don't await here, updateStats is async
         this.updateStats(dateFrom, dateTo);
         this.renderWeeklyChart(dateFrom, dateTo); // Render weekly trend chart
@@ -327,7 +334,7 @@ class ExchangeModule {
                 <!-- ADDED DATE FIELD -->
                 <div class="form-group">
                     <label>Transaction Date</label>
-                    <input type="date" name="date" class="form-control" required value="${new Date().toISOString().split('T')[0]}">
+                    <input type="date" name="date" class="form-control" required value="${new Date().toISOString().split('T')[0]}" max="${new Date().toISOString().split('T')[0]}">
                 </div>
                 <div class="row">
                     <div class="col-md-6">

@@ -16,7 +16,18 @@ class PharmacyModule {
             if (e.target.id === 'btn-pos-add') this.addToCart();
             if (e.target.id === 'btn-pos-checkout') this.checkout();
             if (e.target.id === 'btn-stock-add') this.openStockModal();
-            // Modal Listeners could be here or dynamic
+            
+            // Dashboard date filter buttons
+            if (e.target.id === 'ph-filter-btn') {
+                const dateFrom = document.getElementById('ph-date-from').value;
+                const dateTo = document.getElementById('ph-date-to').value;
+                this.renderDashboard(dateFrom, dateTo);
+            }
+            if (e.target.id === 'ph-reset-btn') {
+                document.getElementById('ph-date-from').value = '';
+                document.getElementById('ph-date-to').value = '';
+                this.renderDashboard();
+            }
         });
     }
 
@@ -43,23 +54,38 @@ class PharmacyModule {
     }
 
     // --- Dashboard ---
-    async renderDashboard() {
+    async renderDashboard(dateFrom = null, dateTo = null) {
         const sales = await window.Store.get(this.salesKey) || [];
         const stock = await window.Store.get(this.stockKey) || [];
 
-        // Today's Sales
+        // Filter sales by date range if provided
+        let filteredSales = sales;
+        if (dateFrom || dateTo) {
+            filteredSales = sales.filter(s => {
+                if (!s.date) return false;
+                const saleDate = new Date(s.date);
+                const from = dateFrom ? new Date(dateFrom) : null;
+                const to = dateTo ? new Date(dateTo + 'T23:59:59') : null; // End of day
+                
+                if (from && saleDate < from) return false;
+                if (to && saleDate > to) return false;
+                return true;
+            });
+        }
+
+        // Calculate stats from filtered sales
         const todayStr = new Date().toISOString().split('T')[0];
-        const todaySales = sales
+        const todaySales = filteredSales
             .filter(s => (s.date && s.date.startsWith(todayStr)))
             .reduce((acc, curr) => acc + (parseFloat(curr.total_amount) || parseFloat(curr.total) || 0), 0);
 
-        // Low Stock (< 10)
+        // Low Stock (not affected by date filter)
         const lowStock = stock.filter(i => i.qty < 10).length;
 
         document.getElementById('ph-today-sales').textContent = todaySales.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
-        // Credit Sales (Outstanding)
-        const creditSales = sales
+        // Credit Sales (Outstanding) from filtered data
+        const creditSales = filteredSales
             .filter(s => s.payment_method === 'credit')
             .reduce((acc, curr) => acc + (parseFloat(curr.total_amount) || parseFloat(curr.total) || 0), 0);
         document.getElementById('ph-credit-sales').textContent = creditSales.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
@@ -67,7 +93,7 @@ class PharmacyModule {
         document.getElementById('ph-low-stock').textContent = lowStock;
 
         this.updateStats(); // Also sync global
-        this.renderWeeklyChart(); // Render weekly trend chart
+        this.renderWeeklyChart(dateFrom, dateTo, filteredSales); // Pass filtered data to chart
     }
 
     async updateStats() {
@@ -78,17 +104,17 @@ class PharmacyModule {
         if (el) el.textContent = total.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
     }
 
-    async renderWeeklyChart() {
+    async renderWeeklyChart(dateFrom = null, dateTo = null, salesData = null) {
         const canvas = document.getElementById('pharmacy-weekly-chart');
         if (!canvas) return;
 
         // Wait for Chart.js to load (it's loaded by analytics)
         if (!window.Chart) {
-            setTimeout(() => this.renderWeeklyChart(), 500);
+            setTimeout(() => this.renderWeeklyChart(dateFrom, dateTo, salesData), 500);
             return;
         }
 
-        const sales = await window.Store.get(this.salesKey) || [];
+        const sales = salesData || await window.Store.get(this.salesKey) || [];
         const weeks = 8;
         const labels = [];
         const data = [];
@@ -321,6 +347,10 @@ class PharmacyModule {
             </div>
             <form id="pharmacy-payment-form">
                 <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" name="date" class="form-control" required value="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div class="form-group">
                     <label>Payment Method</label>
                     <div style="display:flex; gap:20px; margin-top:5px;">
                         <label><input type="radio" name="payment_method" value="cash" checked> Cash</label>
@@ -362,9 +392,13 @@ class PharmacyModule {
                 if (b) bankName = b.bank_name;
             }
 
+            const inputDateVal = payForm.date.value;
+            let inputDate = inputDateVal ? new Date(inputDateVal) : new Date();
             const now = new Date();
+            inputDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+
             const pad = (n) => n.toString().padStart(2, '0');
-            const mysqlDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+            const mysqlDate = `${inputDate.getFullYear()}-${pad(inputDate.getMonth() + 1)}-${pad(inputDate.getDate())} ${pad(inputDate.getHours())}:${pad(inputDate.getMinutes())}:${pad(inputDate.getSeconds())}`;
 
             const sale = {
                 items: this.cart,

@@ -15,7 +15,18 @@ class ConstructionModule {
     initListeners() {
         document.addEventListener('click', (e) => {
             if (e.target.id === 'btn-site-add') this.openAddSiteModal();
-            // Add other button IDs here
+            
+            // Dashboard date filter buttons
+            if (e.target.id === 'cons-filter-btn') {
+                const dateFrom = document.getElementById('cons-date-from').value;
+                const dateTo = document.getElementById('cons-date-to').value;
+                this.renderDashboard(dateFrom, dateTo);
+            }
+            if (e.target.id === 'cons-reset-btn') {
+                document.getElementById('cons-date-from').value = '';
+                document.getElementById('cons-date-to').value = '';
+                this.renderDashboard();
+            }
         });
     }
 
@@ -38,8 +49,8 @@ class ConstructionModule {
                 const dateInputId = action === 'expense' ? 'exp-date' : 'inc-date';
                 const dateInput = document.getElementById(dateInputId);
                 if (dateInput) {
-                    dateInput.min = today;
-                    dateInput.max = today;
+                    // dateInput.min = today; // Allow past dates
+                    // dateInput.max = today;
                     dateInput.value = today; // Set default to today
                 }
                 break;
@@ -160,20 +171,38 @@ class ConstructionModule {
     }
 
     // --- Dashboard ---
-    async renderDashboard() {
+    async renderDashboard(dateFrom = null, dateTo = null) {
         console.log("Rendering Construction Module Dashboard (js/construction.js)");
         const expenses = await window.Store.get(this.expKey) || [];
         const incomes = await window.Store.get(this.incKey) || [];
 
-        const totExp = expenses.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
-        const totInc = incomes.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
+        // Filter by date range if provided
+        let filteredExpenses = expenses;
+        let filteredIncomes = incomes;
+        if (dateFrom || dateTo) {
+            const filterByDate = (item) => {
+                if (!item.date) return false;
+                const itemDate = new Date(item.date);
+                const from = dateFrom ? new Date(dateFrom) : null;
+                const to = dateTo ? new Date(dateTo + 'T23:59:59') : null;
+                
+                if (from && itemDate < from) return false;
+                if (to && itemDate > to) return false;
+                return true;
+            };
+            filteredExpenses = expenses.filter(filterByDate);
+            filteredIncomes = incomes.filter(filterByDate);
+        }
+
+        const totExp = filteredExpenses.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
+        const totInc = filteredIncomes.reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
         const bal = totInc - totExp;
 
         console.log("Calculated Totals (Dashboard):", { totExp, totInc, bal });
 
         // Calculate Credit stats
-        const credExp = expenses.filter(e => e.payment_method === 'credit').reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
-        const credInc = incomes.filter(i => i.payment_method === 'credit').reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
+        const credExp = filteredExpenses.filter(e => e.payment_method === 'credit').reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
+        const credInc = filteredIncomes.filter(i => i.payment_method === 'credit').reduce((a, c) => a + (parseFloat(c.amount) || 0), 0);
 
         const setTxt = (id, val) => {
             const el = document.getElementById(id);
@@ -186,7 +215,7 @@ class ConstructionModule {
         setTxt('cons-dash-credit-expense', credExp);
         setTxt('cons-dash-credit-income', credInc);
         
-        this.renderWeeklyChart(); // Render weekly trend chart
+        this.renderWeeklyChart(dateFrom, dateTo, filteredExpenses, filteredIncomes); // Render weekly trend chart
     }
 
     async updateStats() {
@@ -199,18 +228,18 @@ class ConstructionModule {
         if (el) el.textContent = (totInc - totExp).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
     }
 
-    async renderWeeklyChart() {
+    async renderWeeklyChart(dateFrom = null, dateTo = null, expensesData = null, incomesData = null) {
         const canvas = document.getElementById('construction-weekly-chart');
         if (!canvas) return;
 
         // Wait for Chart.js to load
         if (!window.Chart) {
-            setTimeout(() => this.renderWeeklyChart(), 500);
+            setTimeout(() => this.renderWeeklyChart(dateFrom, dateTo, expensesData, incomesData), 500);
             return;
         }
 
-        const expenses = await window.Store.get(this.expKey) || [];
-        const incomes = await window.Store.get(this.incKey) || [];
+        const expenses = expensesData || await window.Store.get(this.expKey) || [];
+        const incomes = incomesData || await window.Store.get(this.incKey) || [];
         const weeks = 8;
         const labels = [];
         const data = [];

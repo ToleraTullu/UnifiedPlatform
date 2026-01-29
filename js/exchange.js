@@ -25,6 +25,18 @@ class ExchangeModule {
             if(e.target.id === 'btn-record-sell') this.recordTransaction('sell');
             if(e.target.id === 'btn-save-rates') this.saveRates();
             if(e.target.id === 'btn-update-rates') this.showRatesForm(); // Helper if needed
+            
+            // Dashboard date filter buttons
+            if (e.target.id === 'ex-filter-btn') {
+                const dateFrom = document.getElementById('ex-date-from').value;
+                const dateTo = document.getElementById('ex-date-to').value;
+                this.renderDashboard(dateFrom, dateTo);
+            }
+            if (e.target.id === 'ex-reset-btn') {
+                document.getElementById('ex-date-from').value = '';
+                document.getElementById('ex-date-to').value = '';
+                this.renderDashboard();
+            }
         });
         
         // Removed broken global listeners for calculation; renderForm handles this locally.
@@ -128,19 +140,34 @@ class ExchangeModule {
     }
 
     // --- Dashboard ---
-    renderDashboard() {
+    renderDashboard(dateFrom = null, dateTo = null) {
         const currencies = this.getCurrencies(); // Note: this is async but we don't await here, updateStats is async
-        this.updateStats();
-        this.renderWeeklyChart(); // Render weekly trend chart
+        this.updateStats(dateFrom, dateTo);
+        this.renderWeeklyChart(dateFrom, dateTo); // Render weekly trend chart
     }
 
-    async updateStats() {
+    async updateStats(dateFrom = null, dateTo = null) {
         // Show loader on stats cards if empty? 
         // Better to just let them update naturally. 
         // But for "Global" stat which might take time:
         // UI.showLoader('#stat-exchange'); // Example usage if needed, but text replacement is usually instant here.
         
         const transactions = await window.Store.get(this.txKey) || [];
+
+        // Filter transactions by date range if provided
+        let filteredTransactions = transactions;
+        if (dateFrom || dateTo) {
+            filteredTransactions = transactions.filter(tx => {
+                if (!tx.date) return false;
+                const txDate = new Date(tx.date);
+                const from = dateFrom ? new Date(dateFrom) : null;
+                const to = dateTo ? new Date(dateTo + 'T23:59:59') : null;
+                
+                if (from && txDate < from) return false;
+                if (to && txDate > to) return false;
+                return true;
+            });
+        }
 
         // Calculate totals by type and currency
         const stats = {
@@ -150,7 +177,7 @@ class ExchangeModule {
 
         let totalVol = 0;
 
-        transactions.forEach(tx => {
+        filteredTransactions.forEach(tx => {
             const amt = parseFloat(tx.amount) || 0;
             const rate = parseFloat(tx.rate) || 0;
             const code = tx.currency_code; // Correct field name
@@ -178,17 +205,33 @@ class ExchangeModule {
         if (globalEl) globalEl.textContent = totalVol.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
     }
 
-    async renderWeeklyChart() {
+    async renderWeeklyChart(dateFrom = null, dateTo = null) {
         const canvas = document.getElementById('exchange-weekly-chart');
         if (!canvas) return;
 
         // Wait for Chart.js to load
         if (!window.Chart) {
-            setTimeout(() => this.renderWeeklyChart(), 500);
+            setTimeout(() => this.renderWeeklyChart(dateFrom, dateTo), 500);
             return;
         }
 
         const transactions = await window.Store.get(this.txKey) || [];
+        
+        // Filter transactions by date range if provided
+        let filteredTransactions = transactions;
+        if (dateFrom || dateTo) {
+            filteredTransactions = transactions.filter(tx => {
+                if (!tx.date) return false;
+                const txDate = new Date(tx.date);
+                const from = dateFrom ? new Date(dateFrom) : null;
+                const to = dateTo ? new Date(dateTo + 'T23:59:59') : null;
+                
+                if (from && txDate < from) return false;
+                if (to && txDate > to) return false;
+                return true;
+            });
+        }
+        
         const weeks = 8;
         const labels = [];
         const data = [];
@@ -202,7 +245,7 @@ class ExchangeModule {
             labels.push(weekEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
             
             // Calculate volume for this week (total local currency value)
-            const weekVolume = transactions.filter(tx => {
+            const weekVolume = filteredTransactions.filter(tx => {
                 const txDate = new Date(tx.date);
                 return txDate >= weekStart && txDate <= weekEnd;
             }).reduce((sum, tx) => {
@@ -280,6 +323,11 @@ class ExchangeModule {
                 <div class="form-group">
                     <label>Customer ID / Passport</label>
                     <input type="text" name="cid" required placeholder="ID Number" class="form-control">
+                </div>
+                <!-- ADDED DATE FIELD -->
+                <div class="form-group">
+                    <label>Transaction Date</label>
+                    <input type="date" name="date" class="form-control" required value="${new Date().toISOString().split('T')[0]}">
                 </div>
                 <div class="row">
                     <div class="col-md-6">
@@ -515,9 +563,18 @@ class ExchangeModule {
                 }
             }
 
+
+
+        // Use selected date or fallback to now
+        const inputDateVal = fd.get('date');
+        let inputDate = inputDateVal ? new Date(inputDateVal) : new Date();
         const now = new Date();
+        // Set time to current time if date is today, or keep as is? 
+        // Best to just append current time to the selected date to avoid timezone weirdness or midnight issues.
+        inputDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+
         const pad = (n) => n.toString().padStart(2, '0');
-        const mysqlDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        const mysqlDate = `${inputDate.getFullYear()}-${pad(inputDate.getMonth() + 1)}-${pad(inputDate.getDate())} ${pad(inputDate.getHours())}:${pad(inputDate.getMinutes())}:${pad(inputDate.getSeconds())}`;
 
         const transaction = {
             id: Date.now(),

@@ -473,7 +473,68 @@ class App {
         const npEl = document.getElementById('stat-net-profit');
         if (npEl) npEl.textContent = netProfit.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
 
+        await this.renderAdminBankChart();
         await this.renderActivityStream();
+    }
+
+    async renderAdminBankChart() {
+        const banks = await window.Store.get('bank_accounts') || [];
+        const canvas = document.getElementById('admin-bank-chart');
+        
+        if (!canvas || banks.length === 0) return;
+
+        if (!window.Chart) {
+            // Retry if Chart.js not loaded yet (though it should be by dashboard load usually, or we load it)
+            // But let's assume it's loaded for now or handle lazy load if needed.
+            // Actually analytics loads it. Let's ensure we try to load it if missing.
+             if (!window.AnalyticsLoadPromise) {
+                // Initial load effort if not present
+                 const script = document.createElement('script');
+                 script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+                 window.AnalyticsLoadPromise = new Promise(resolve => script.onload = resolve);
+                 document.head.appendChild(script);
+             }
+             await window.AnalyticsLoadPromise;
+        }
+        
+        const labels = banks.map(b => b.bank_name);
+        const data = banks.map(b => parseFloat(b.balance));
+        const colors = banks.map(b => parseFloat(b.balance) < parseFloat(b.min_balance_threshold) ? '#ef4444' : '#3b82f6');
+
+        if (this.adminBankChart) this.adminBankChart.destroy();
+
+        this.adminBankChart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Current Balance',
+                    data: data,
+                    backgroundColor: colors,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                         callbacks: {
+                            label: (ctx) => `Balance: ${ctx.parsed.y.toLocaleString(undefined, {style:'currency', currency:'USD'})}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                         ticks: {
+                            callback: (value) => value.toLocaleString(undefined, {notation: 'compact'})
+                        }
+                    }
+                }
+            }
+        });
     }
 
     async renderAdminAnalytics() {

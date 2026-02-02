@@ -11,7 +11,72 @@ class BankingModule {
     async init() {
         this.prefix = this.sector === 'exchange' ? 'ex' : (this.sector === 'pharmacy' ? 'ph' : 'cons');
         await this.renderAccounts();
+        await this.renderBalanceChart();
         this.initTransferForm();
+    }
+
+    async renderBalanceChart() {
+        const banks = await window.Store.get(this.banksKey) || [];
+        const filtered = banks.filter(b => {
+             if (b.sectors === 'all' || !b.sectors) return true;
+             const sList = typeof b.sectors === 'string' ? b.sectors.split(',') : (Array.isArray(b.sectors) ? b.sectors : []);
+             return sList.includes(this.sector);
+        });
+
+        // Use sector name for ID, e.g. 'exchange-bank-chart'
+        const canvasId = `${this.sector}-bank-chart`;
+        const canvas = document.getElementById(canvasId);
+
+        if (!canvas || filtered.length === 0) return;
+
+        if (!window.Chart) {
+             if (!window.AnalyticsLoadPromise) {
+                 const script = document.createElement('script');
+                 script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+                 window.AnalyticsLoadPromise = new Promise(resolve => script.onload = resolve);
+                 document.head.appendChild(script);
+             }
+             await window.AnalyticsLoadPromise;
+        }
+
+        const labels = filtered.map(b => b.bank_name);
+        const data = filtered.map(b => parseFloat(b.balance));
+        const colors = filtered.map(b => parseFloat(b.balance) < parseFloat(b.min_balance_threshold) ? '#ef4444' : '#3b82f6');
+
+        if (this.bankChart) this.bankChart.destroy();
+
+        this.bankChart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Current Balance',
+                    data: data,
+                    backgroundColor: colors,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                     tooltip: {
+                         callbacks: {
+                            label: (ctx) => `Balance: ${ctx.parsed.y.toLocaleString(undefined, {style:'currency', currency:'USD'})}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => value.toLocaleString(undefined, {notation: 'compact'})
+                        }
+                    }
+                }
+            }
+        });
     }
 
     async renderAccounts() {

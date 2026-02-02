@@ -44,22 +44,23 @@ if ($action === 'sites') {
             }
         }
 
-        $bank_account_id = !empty($data['bank_account_id']) ? $data['bank_account_id'] : null;
-
-        if ($bank_account_id && ($data['payment_method'] ?? 'cash') === 'bank') {
-            $check = $pdo->prepare("SELECT balance FROM bank_accounts WHERE id = ?");
-            $check->execute([$bank_account_id]);
-            $acc = $check->fetch();
-            if (!$acc || $acc['balance'] < $data['amount']) {
-                echo json_encode(['success' => false, 'message' => 'Insufficient bank funds']);
-                exit;
-            }
-            $up = $pdo->prepare("UPDATE bank_accounts SET balance = balance - ? WHERE id = ?");
-            $up->execute([$data['amount'], $bank_account_id]);
-        }
-
-        $stmt = $pdo->prepare("INSERT INTO construction_expenses (site_id, description, amount, date, payment_method, bank_account_id, external_bank_name, external_account_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         try {
+            $pdo->beginTransaction();
+
+            $bank_account_id = !empty($data['bank_account_id']) ? $data['bank_account_id'] : null;
+
+            if ($bank_account_id && ($data['payment_method'] ?? 'cash') === 'bank') {
+                $check = $pdo->prepare("SELECT balance FROM bank_accounts WHERE id = ?");
+                $check->execute([$bank_account_id]);
+                $acc = $check->fetch();
+                if (!$acc || $acc['balance'] < $data['amount']) {
+                    throw new Exception('Insufficient bank funds');
+                }
+                $up = $pdo->prepare("UPDATE bank_accounts SET balance = balance - ? WHERE id = ?");
+                $up->execute([$data['amount'], $bank_account_id]);
+            }
+
+            $stmt = $pdo->prepare("INSERT INTO construction_expenses (site_id, description, amount, date, payment_method, bank_account_id, external_bank_name, external_account_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $site_id,
                 $data['description'] ?? $data['desc'] ?? '',
@@ -71,8 +72,13 @@ if ($action === 'sites') {
                 $data['external_account_number'] ?? null
             ]);
             $data['id'] = $pdo->lastInsertId();
+
+            $pdo->commit();
             echo json_encode(['success' => true, 'data' => $data]);
-        } catch (PDOException $e) {
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     } else {
@@ -98,15 +104,17 @@ if ($action === 'sites') {
             }
         }
 
-        $bank_account_id = !empty($data['bank_account_id']) ? $data['bank_account_id'] : null;
-
-        if ($bank_account_id && ($data['payment_method'] ?? 'cash') === 'bank') {
-            $up = $pdo->prepare("UPDATE bank_accounts SET balance = balance + ? WHERE id = ?");
-            $up->execute([$data['amount'], $bank_account_id]);
-        }
-
-        $stmt = $pdo->prepare("INSERT INTO construction_income (site_id, description, amount, date, payment_method, bank_account_id) VALUES (?, ?, ?, ?, ?, ?)");
         try {
+            $pdo->beginTransaction();
+
+            $bank_account_id = !empty($data['bank_account_id']) ? $data['bank_account_id'] : null;
+
+            if ($bank_account_id && ($data['payment_method'] ?? 'cash') === 'bank') {
+                $up = $pdo->prepare("UPDATE bank_accounts SET balance = balance + ? WHERE id = ?");
+                $up->execute([$data['amount'], $bank_account_id]);
+            }
+
+            $stmt = $pdo->prepare("INSERT INTO construction_income (site_id, description, amount, date, payment_method, bank_account_id) VALUES (?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $site_id,
                 $data['description'] ?? $data['desc'] ?? '',
@@ -116,8 +124,13 @@ if ($action === 'sites') {
                 $bank_account_id
             ]);
             $data['id'] = $pdo->lastInsertId();
+
+            $pdo->commit();
             echo json_encode(['success' => true, 'data' => $data]);
-        } catch (PDOException $e) {
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     } else {

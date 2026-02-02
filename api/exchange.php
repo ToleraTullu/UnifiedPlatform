@@ -52,6 +52,8 @@ if ($action === 'rates') {
         $stmt = $pdo->prepare($sql);
 
         try {
+            $pdo->beginTransaction();
+
             // Fix: Handle empty string for bank_account_id as NULL
             $bankAccountId = !empty($data['bank_account_id']) ? $data['bank_account_id'] : null;
 
@@ -59,7 +61,6 @@ if ($action === 'rates') {
             if ($bankAccountId && ($data['payment_method'] ?? 'cash') === 'bank') {
                 // Verify funds for BUY (We are paying out, so balance decreases)
                 // Or for SELL (We are receiving, so balance increases)
-
                 // NOTE: 'buy' means we buy Foreign Currency, we PAY Local Currency. 
                 // 'sell' means we sell Foreign Currency, we RECEIVE Local Currency.
                 // Assuming 'total_local' is the amount taken/given from the bank account (Local Currency Account).
@@ -98,8 +99,13 @@ if ($action === 'rates') {
             ]);
             // Return item with new ID
             $data['id'] = $pdo->lastInsertId();
+
+            $pdo->commit();
             echo json_encode(['success' => true, 'data' => $data]);
-        } catch (PDOException $e) {
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
 

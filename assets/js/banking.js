@@ -9,6 +9,7 @@ class BankingModule {
     }
 
     async init() {
+        this.prefix = this.sector === 'exchange' ? 'ex' : (this.sector === 'pharmacy' ? 'ph' : 'cons');
         await this.renderAccounts();
         this.initTransferForm();
     }
@@ -21,7 +22,7 @@ class BankingModule {
              return sList.includes(this.sector);
         });
 
-        const tbody = document.getElementById('banks-body');
+        const tbody = document.getElementById(`${this.prefix}-banks-body`);
         if (!tbody) return;
         tbody.innerHTML = '';
 
@@ -60,8 +61,11 @@ class BankingModule {
     }
 
     populateTransferDropdowns(accounts) {
-        const fromSelect = document.getElementById('transfer-from');
-        const toSelect = document.getElementById('transfer-to');
+        const form = document.getElementById(`${this.prefix}-transfer-form`);
+        if (!form) return;
+        
+        const fromSelect = form.querySelector('[name="from_account_id"]');
+        const toSelect = form.querySelector('[name="to_account_id"]');
         if (!fromSelect || !toSelect) return;
 
         fromSelect.innerHTML = '<option value="">Select Account</option>';
@@ -75,7 +79,7 @@ class BankingModule {
     }
 
     initTransferForm() {
-        const form = document.getElementById('transfer-form');
+        const form = document.getElementById(`${this.prefix}-transfer-form`);
         if (!form) return;
 
         form.onsubmit = async (e) => {

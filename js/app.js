@@ -92,6 +92,25 @@ class App {
         const coCard = document.querySelector('.card.stat-card.orange');
         if (coCard) coCard.onclick = () => this.navigateTo('construction-dashboard');
         if (coCard) coCard.style.cursor = 'pointer';
+
+        // Bank Card Redirects (Sector Dashboards)
+        const exBankCard = document.getElementById('ex-bank-balance')?.closest('.card');
+        if (exBankCard) {
+            exBankCard.onclick = () => this.navigateTo('exchange-bank');
+            exBankCard.style.cursor = 'pointer';
+        }
+
+        const phBankCard = document.getElementById('ph-bank-balance')?.closest('.card');
+        if (phBankCard) {
+            phBankCard.onclick = () => this.navigateTo('pharmacy-bank');
+            phBankCard.style.cursor = 'pointer';
+        }
+
+        const consBankCard = document.getElementById('cons-bank-balance')?.closest('.card');
+        if (consBankCard) {
+            consBankCard.onclick = () => this.navigateTo('construction-bank');
+            consBankCard.style.cursor = 'pointer';
+        }
     }
 
     async updateNotifications() {
@@ -228,6 +247,7 @@ class App {
                     { id: 'exchange-sell', label: 'Sell Currency', icon: '📤', submenu: true },
                     { id: 'exchange-holdings', label: 'Vault Holdings', icon: '🏦', submenu: true },
                     { id: 'exchange-rates', label: 'Set Rates', icon: '⚙️', submenu: true, allowedRoles: ['admin'] },
+                    { id: 'exchange-bank', label: 'Bank & Transfers', icon: '🏦', submenu: true },
                     { id: 'exchange-records', label: 'Transactions', icon: '📝', submenu: true }
                 ]
             },
@@ -238,6 +258,7 @@ class App {
                     { id: 'pharmacy-dashboard', label: 'Dashboard', icon: '🏥' },
                     { id: 'pharmacy-pos', label: 'Point of Sale', icon: '🛒', submenu: true },
                     { id: 'pharmacy-stock', label: 'Stock Management', icon: '📦', submenu: true },
+                    { id: 'pharmacy-bank', label: 'Bank & Transfers', icon: '🏦', submenu: true },
                     { id: 'pharmacy-records', label: 'Sales History', icon: '📑', submenu: true }
                 ]
             },
@@ -249,6 +270,7 @@ class App {
                     { id: 'construction-sites', label: 'Manage Sites', icon: '📍', submenu: true, allowedRoles: ['admin'] },
                     { id: 'construction-expense', label: 'Log Expense', icon: '💸', submenu: true },
                     { id: 'construction-income', label: 'Log Income', icon: '💰', submenu: true },
+                    { id: 'construction-bank', label: 'Bank & Transfers', icon: '🏦', submenu: true },
                     { id: 'construction-records', label: 'Financials', icon: '📋', submenu: true }
                 ]
             }
@@ -321,7 +343,19 @@ class App {
         // Toggle Active State in Sidebar
         document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
         const link = document.querySelector(`.menu-item[data-target="${viewId}"]`);
-        if (link) link.classList.add('active');
+        if (link) {
+            link.classList.add('active');
+            
+            // Auto-expand parent category
+            const group = link.closest('.nav-item-group');
+            if (group && !group.classList.contains('open')) {
+                group.classList.add('open');
+                const header = group.previousElementSibling;
+                if (header && header.classList.contains('nav-category')) {
+                    header.classList.add('active-cat');
+                }
+            }
+        }
 
         // Hide all views
         document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
@@ -392,6 +426,25 @@ class App {
         if (module === 'exchange' && window.ExchangeModule) window.ExchangeModule.onViewLoad(action);
         if (module === 'pharmacy' && window.PharmacyModule) window.PharmacyModule.onViewLoad(action);
         if (module === 'construction' && window.ConstructionModule) window.ConstructionModule.onViewLoad(action);
+
+        // Banking Module Initialization
+        if (action === 'bank') {
+            if (!window.BankingModule) {
+                const script = document.createElement('script');
+                script.src = 'assets/js/banking.js';
+                script.onload = () => this.initSectorBanking(module);
+                document.head.appendChild(script);
+            } else {
+                this.initSectorBanking(module);
+            }
+        }
+    }
+
+    initSectorBanking(sector) {
+        if (window.BankingModule) {
+            const instance = new window.BankingModule(sector);
+            instance.init();
+        }
     }
 
     async renderAdminDashboard() {

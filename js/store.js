@@ -3,7 +3,12 @@
  * Connectivity to PHP/MySQL Backend
  */
 
-const API_BASE = 'api/';
+const getApiBase = () => {
+    if (window.location.href.includes('/modules/')) return '../../api/';
+    if (window.location.href.includes('/admin/')) return '../api/';
+    return 'api/';
+};
+const API_BASE = getApiBase();
 
 const ENDPOINTS = {
     'unified_users': 'users.php',

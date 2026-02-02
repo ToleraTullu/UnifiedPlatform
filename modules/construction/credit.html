@@ -81,6 +81,12 @@
     <script src="../../js/construction.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+             // Init Layout
+             const layout = new Layout();
+             layout.ensureLayoutContainers();
+             layout.renderSidebar();
+             layout.renderTopbar();
+
              if(window.ConstructionModule && window.ConstructionModule.initCreditPage) {
                  window.ConstructionModule.initCreditPage();
              }

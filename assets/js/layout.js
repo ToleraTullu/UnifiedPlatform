@@ -151,6 +151,7 @@ class Layout {
                     { label: 'Dashboard', icon: '🏥', link: 'modules/pharmacy/dashboard.html' },
                     { label: 'Point of Sale', icon: '🛒', link: 'modules/pharmacy/pos.html' },
                     { label: 'Stock Mgmt', icon: '📦', link: 'modules/pharmacy/stock.html' },
+                    { label: 'Credit Mgmt', icon: '💳', link: 'modules/pharmacy/credit.html' },
                     { label: 'Sales History', icon: '📑', link: 'modules/pharmacy/records.html' },
                     { label: 'Banking', icon: '🏦', link: 'modules/pharmacy/bank.html' }
                 ]
@@ -163,6 +164,7 @@ class Layout {
                     { label: 'Log Expense', icon: '💸', link: 'modules/construction/expense.html' },
                     { label: 'Log Income', icon: '💰', link: 'modules/construction/income.html' },
                     { label: 'Financials', icon: '📋', link: 'modules/construction/records.html' },
+                    { label: 'Credit Mgmt', icon: '💳', link: 'modules/construction/credit.html' },
                     { label: 'Banking', icon: '🏦', link: 'modules/construction/bank.html' }
                 ]
             }

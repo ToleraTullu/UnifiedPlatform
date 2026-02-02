@@ -21,6 +21,20 @@ try {
         }
     }
 
+    // Add payment_status to transaction tables
+    $tablesToCheck = ['pharmacy_sales', 'construction_expenses', 'construction_income'];
+    foreach ($tablesToCheck as $table) {
+        $stmt = $pdo->query("SHOW COLUMNS FROM $table LIKE 'payment_status'");
+        if (!$stmt->fetch()) {
+            echo "Adding payment_status to $table...\n";
+            $pdo->exec("ALTER TABLE $table ADD COLUMN payment_status VARCHAR(20) DEFAULT 'paid'");
+            // Update existing credit transactions to pending
+            $pdo->exec("UPDATE $table SET payment_status = 'pending' WHERE payment_method = 'credit'");
+        } else {
+            echo "Column payment_status already exists in $table.\n";
+        }
+    }
+
     echo "Database updated successfully!\n";
 } catch (PDOException $e) {
     echo "Error updating database: " . $e->getMessage() . "\n";

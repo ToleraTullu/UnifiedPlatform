@@ -20,16 +20,8 @@ class BankingModule {
         const tbody = document.getElementById(`${this.prefix}-transfer-history`);
         if (!tbody) return;
 
-        // Fetch logs filtered by module=BANKING (since we logged as BANKING) 
-        // OR better: if we want sector specific, we should lay be logging as 'EXCHANGE_BANKING', etc?
-        // Current implementation in bank_accounts.php logs as 'BANKING'.
-        // So we will show ALL banking transfers for now, or filter client side if we parsed details.
-        // Request: "when transfering from bank to bank show on system log for the admin also show on their transaction history"
-        // If "their" refers to the sector, we assume global banking history is fine, or we filter.
-        // Since banks are shared or sector specific, showing global transfers might be noise.
-        // Let's rely on 'BANKING' module for now.
-        
-        let url = `api/logs.php?action=list&limit=20&module=BANKING&action_type=TRANSFER`;
+        // Fetch logs filtered by module (Sector specific)
+        let url = `api/logs.php?action=list&limit=20&module=${this.sector.toUpperCase()}&action_type=TRANSFER`;
         
         try {
             const res = await fetch(url);
@@ -210,11 +202,9 @@ class BankingModule {
                 btn.disabled = true;
                 btn.textContent = 'Processing...';
 
-                await window.Store.transferFunds(fromId, toId, amount);
+                await window.Store.transferFunds(fromId, toId, amount, this.sector.toUpperCase()); // Pass sector for logging
                 
-                // Log activity
-                await window.Store.logActivity('TRANSFER', this.sector, `Transferred ${amount} from ${fromId} to ${toId}`);
-
+                // Alert handled below
                 alert('Transfer Successful!');
                 form.reset();
                 await this.renderAccounts();

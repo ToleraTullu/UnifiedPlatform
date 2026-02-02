@@ -74,18 +74,25 @@ class ExchangeModule {
     // --- Data Helpers ---
     async calculateHoldings() {
         const txs = await window.Store.get(this.txKey) || [];
-        // Initial Vault (Seed)
+        const banks = await window.Store.get('bank_accounts') || [];
+        
+        // Local Vault = Sum of Exchange Bank Balances
+        const localBalance = banks.filter(b => {
+             if (b.sectors === 'all' || !b.sectors) return true;
+             const sList = typeof b.sectors === 'string' ? b.sectors.split(',') : (Array.isArray(b.sectors) ? b.sectors : []);
+             return sList.includes('exchange');
+        }).reduce((sum, b) => sum + parseFloat(b.balance || 0), 0);
+
+        // Initial Vault (Seed) for Foreign Ccy only
         const vault = {
             USD: 10000,
             EUR: 5000,
             GBP: 5000,
-            LOCAL: 500000 
+            LOCAL: localBalance 
         };
 
         txs.forEach(tx => {
             const amt = parseFloat(tx.amount || 0);
-            const rate = parseFloat(tx.rate || 0);
-            const total = parseFloat(tx.total || (amt * rate));
             const code = (tx.currency_code || tx.currency || '').toUpperCase();
 
             if (!code) return; // Skip invalid tx
@@ -95,11 +102,22 @@ class ExchangeModule {
             if (type === 'buy') {
                 if (vault[code] === undefined) vault[code] = 0;
                 vault[code] += amt;
-                vault.LOCAL -= total;
+                // vault.LOCAL -= total; // NO: Local balance is now real-time from bank, which is updated via 'transfer' or manual update? 
+                // Wait. Buying stock DECREASES bank balance.
+                // The transaction logic currently DOES NOT automatically deduct from bank unless we call 'transfer'.
+                // If we want 'recordTransaction' to update bank balance, we need to ensure it calls an API to update balance.
+                // Current 'recordTransaction' logic (lines 606+) allows choosing "Bank" payment method.
+                // If 'Bank' is chosen, we should effectively "Spend" from that bank account.
+                // But if 'Cash' is chosen, we need a 'Cash' account or we just track it in a virtual vault?
+                // user said "local currency reserve is to total amount of cash in the bank".
+                // This implies we ONLY care about Bank Balance for Local Currency.
+                // So if I Buy with Cash, it does NOT affect this metric? Or does Cash also go to bank?
+                // Let's assume Local Reserve = Bank Balance.
+                // Foreign Currency is still tracked via transactions.
             } else if (type === 'sell') {
                 if (vault[code] === undefined) vault[code] = 0;
                 vault[code] -= amt;
-                vault.LOCAL += total;
+                // vault.LOCAL += total; // Same as above.
             }
         });
         return vault;

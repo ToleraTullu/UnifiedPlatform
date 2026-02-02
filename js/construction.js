@@ -658,6 +658,144 @@ class ConstructionModule {
             UI.error('Failed to delete record.');
         }
     }
+
+    // --- Credit Management ---
+    async initCreditPage() {
+        // Load Banks
+        await this.loadCreditBanks();
+
+        // Load Pending Transactions
+        await this.loadCreditTransactions();
+
+        // Modal Logic
+        const modal = document.getElementById('payment-modal');
+        const form = document.getElementById('settle-payment-form');
+        const bankGrp = document.getElementById('settle-bank-group');
+        const methodSel = document.getElementById('settle-method');
+
+        if (methodSel) {
+            methodSel.addEventListener('change', () => {
+                bankGrp.classList.toggle('hidden', methodSel.value !== 'bank');
+                document.getElementById('settle-bank-id').required = (methodSel.value === 'bank');
+            });
+        }
+
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                await this.settleTransaction(
+                    document.getElementById('settle-id').value,
+                    document.getElementById('settle-type').value,
+                    methodSel.value,
+                    document.getElementById('settle-bank-id').value
+                );
+            };
+        }
+
+        if (modal) {
+            modal.querySelector('.close-modal').onclick = () => modal.classList.add('hidden');
+        }
+    }
+
+    async loadCreditBanks() {
+        const banks = await window.Store.get('bank_accounts') || [];
+        const consBanks = banks.filter(b => {
+             if (b.sectors === 'all' || !b.sectors) return true;
+             const sList = typeof b.sectors === 'string' ? b.sectors.split(',') : (Array.isArray(b.sectors) ? b.sectors : []);
+             return sList.includes('construction');
+        });
+        const sel = document.getElementById('settle-bank-id');
+        if (sel) {
+            sel.innerHTML = '<option value="">-- Select Bank --</option>' + 
+                consBanks.map(b => `<option value="${b.id}">${b.bank_name}</option>`).join('');
+        }
+    }
+
+    async loadCreditTransactions() {
+        const tbody = document.getElementById('credit-list');
+        if (!tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Loading...</td></tr>';
+
+        try {
+            const [resExp, resInc] = await Promise.all([
+                fetch('api/construction.php?action=expenses&status=pending'),
+                fetch('api/construction.php?action=income&status=pending')
+            ]);
+            
+            const expenses = await resExp.json();
+            const income = await resInc.json();
+
+            const all = [
+                ...expenses.map(e => ({...e, type: 'expense'})), 
+                ...income.map(i => ({...i, type: 'income'}))
+            ].sort((a,b) => new Date(a.date) - new Date(b.date));
+
+            tbody.innerHTML = '';
+            if (all.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No outstanding credit transactions found.</td></tr>';
+                return;
+            }
+
+            all.forEach(tx => {
+                const tr = document.createElement('tr');
+                const badgeClass = tx.type === 'income' ? 'badge-success' : 'badge-danger';
+                tr.innerHTML = `
+                    <td>${new Date(tx.date).toLocaleDateString()}</td>
+                    <td><span class="badge ${badgeClass}">${tx.type.toUpperCase()}</span></td>
+                    <td>${tx.project || tx.site || '-'}</td>
+                    <td>${tx.description}</td>
+                    <td>${parseFloat(tx.amount).toLocaleString(undefined, {style:'currency', currency:'ETB'})}</td>
+                    <td>
+                        <button class="btn-primary btn-sm" onclick="window.ConstructionModule.openSettleModal(${tx.id}, '${tx.type}', ${tx.amount})">Complete Payment</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (e) {
+            console.error(e);
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Error loading credits.</td></tr>';
+        }
+    }
+
+    openSettleModal(id, type, amount) {
+        document.getElementById('settle-id').value = id;
+        document.getElementById('settle-type').value = type;
+        document.getElementById('settle-amount').textContent = parseFloat(amount).toLocaleString(undefined, {style:'currency', currency:'ETB'});
+        
+        document.getElementById('settle-method').value = 'cash';
+        document.getElementById('settle-bank-group').classList.add('hidden');
+        document.getElementById('settle-bank-id').value = '';
+        
+        document.getElementById('payment-modal').classList.remove('hidden');
+    }
+
+    async settleTransaction(id, type, method, bankId) {
+        if (!confirm('Confirm payment settlement?')) return;
+
+        try {
+            const res = await fetch('api/construction.php?action=complete_payment', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    id: id,
+                    type: type, // needed to know which table
+                    payment_method: method,
+                    bank_account_id: bankId
+                })
+            });
+            const result = await res.json();
+            if (result.success) {
+                UI.success('Transaction settled successfully!');
+                document.getElementById('payment-modal').classList.add('hidden');
+                this.loadCreditTransactions(); 
+            } else {
+                UI.error(result.message || 'Settlement failed.');
+            }
+        } catch (e) {
+            UI.error('Connection error.');
+        }
+    }
 }
 
 window.ConstructionModule = new ConstructionModule();

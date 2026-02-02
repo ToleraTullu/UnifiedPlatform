@@ -73,11 +73,13 @@ if ($action === 'stock') {
             }
 
             // 2. Insert Sale
-            $stmt = $pdo->prepare("INSERT INTO pharmacy_sales (date, total_amount, payment_method, bank_account_id, doctor_name, patient_name) VALUES (?, ?, ?, ?, ?, ?)");
+            $status = ($sale['payment_method'] === 'credit') ? 'pending' : 'paid';
+            $stmt = $pdo->prepare("INSERT INTO pharmacy_sales (date, total_amount, payment_method, payment_status, bank_account_id, doctor_name, patient_name) VALUES (?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $sale['date'] ?? date('Y-m-d H:i:s'),
                 $amt,
                 $sale['payment_method'] ?? 'cash',
+                $status,
                 $bank_account_id,
                 $sale['doctor_name'] ?? null,
                 $sale['patient_name'] ?? null
@@ -119,10 +121,17 @@ if ($action === 'stock') {
         }
     } else {
         // Fetch sales with their items
-        $stmt = $pdo->query("SELECT * FROM pharmacy_sales ORDER BY date DESC");
+        // Optional: filter by status?
+        $status = $_GET['status'] ?? '';
+        $sql = "SELECT * FROM pharmacy_sales";
+        if ($status) {
+            $sql .= " WHERE payment_status = '$status'";
+        }
+        $sql .= " ORDER BY date DESC";
+        $stmt = $pdo->query($sql);
         $sales = $stmt->fetchAll();
 
-        // For each sale, fetch its items
+        // For each sale, fetch its items if needed? For basic list we might not need items every time, but sticking to existing logic.
         $stmtItems = $pdo->prepare("SELECT * FROM pharmacy_sale_items WHERE sale_id = ?");
         foreach ($sales as &$sale) {
             $stmtItems->execute([$sale['id']]);
@@ -130,6 +139,48 @@ if ($action === 'stock') {
         }
 
         echo json_encode($sales);
+    }
+} elseif ($action === 'complete_payment') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = json_decode(file_get_contents("php://input"), true);
+        $id = $data['id'] ?? null;
+        $method = $data['payment_method'] ?? 'cash';
+        $bankId = $data['bank_account_id'] ?? null;
+
+        if (!$id) {
+            echo json_encode(['success' => false, 'message' => 'Missing ID']);
+            exit;
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            $f = $pdo->prepare("SELECT * FROM pharmacy_sales WHERE id = ?");
+            $f->execute([$id]);
+            $sale = $f->fetch();
+
+            if (!$sale || $sale['payment_status'] === 'paid') {
+                throw new Exception("Invalid sale or already paid");
+            }
+
+            // Update status
+            $up = $pdo->prepare("UPDATE pharmacy_sales SET payment_status = 'paid', payment_method = ?, bank_account_id = ? WHERE id = ?");
+            // If paying by bank, update balance
+            if ($method === 'bank' && $bankId) {
+                $bUp = $pdo->prepare("UPDATE bank_accounts SET balance = balance + ? WHERE id = ?");
+                $bUp->execute([$sale['total_amount'], $bankId]);
+            }
+
+            // Note: We are overwriting the original method (credit) with the new method (cash/bank) so we know how it was eventually paid.
+            $up->execute([$method, $bankId, $id]);
+
+            $pdo->commit();
+            echo json_encode(['success' => true]);
+
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
     }
 } elseif ($action === 'delete_stock') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {

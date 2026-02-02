@@ -60,13 +60,16 @@ if ($action === 'sites') {
                 $up->execute([$data['amount'], $bank_account_id]);
             }
 
-            $stmt = $pdo->prepare("INSERT INTO construction_expenses (site_id, description, amount, date, payment_method, bank_account_id, external_bank_name, external_account_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $status = (($data['payment_method'] ?? 'cash') === 'credit') ? 'pending' : 'paid';
+
+            $stmt = $pdo->prepare("INSERT INTO construction_expenses (site_id, description, amount, date, payment_method, payment_status, bank_account_id, external_bank_name, external_account_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $site_id,
                 $data['description'] ?? $data['desc'] ?? '',
                 $data['amount'],
                 $data['date'],
                 $data['payment_method'] ?? 'cash',
+                $status,
                 $bank_account_id,
                 $data['external_bank_name'] ?? null,
                 $data['external_account_number'] ?? null
@@ -82,7 +85,13 @@ if ($action === 'sites') {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     } else {
-        $stmt = $pdo->query("SELECT ce.*, cs.name as project FROM construction_expenses ce LEFT JOIN construction_sites cs ON ce.site_id = cs.id ORDER BY ce.date DESC");
+        $status = $_GET['status'] ?? '';
+        $sql = "SELECT ce.*, cs.name as project FROM construction_expenses ce LEFT JOIN construction_sites cs ON ce.site_id = cs.id";
+        if ($status) {
+            $sql .= " WHERE ce.payment_status = '$status'";
+        }
+        $sql .= " ORDER BY ce.date DESC";
+        $stmt = $pdo->query($sql);
         echo json_encode($stmt->fetchAll());
     }
 } elseif ($action === 'income') {
@@ -114,13 +123,16 @@ if ($action === 'sites') {
                 $up->execute([$data['amount'], $bank_account_id]);
             }
 
-            $stmt = $pdo->prepare("INSERT INTO construction_income (site_id, description, amount, date, payment_method, bank_account_id) VALUES (?, ?, ?, ?, ?, ?)");
+            $status = (($data['payment_method'] ?? 'cash') === 'credit') ? 'pending' : 'paid';
+
+            $stmt = $pdo->prepare("INSERT INTO construction_income (site_id, description, amount, date, payment_method, payment_status, bank_account_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $site_id,
                 $data['description'] ?? $data['desc'] ?? '',
                 $data['amount'],
                 $data['date'],
                 $data['payment_method'] ?? 'cash',
+                $status,
                 $bank_account_id
             ]);
             $data['id'] = $pdo->lastInsertId();
@@ -134,8 +146,72 @@ if ($action === 'sites') {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     } else {
-        $stmt = $pdo->query("SELECT ci.*, cs.name as project FROM construction_income ci LEFT JOIN construction_sites cs ON ci.site_id = cs.id ORDER BY ci.date DESC");
+        $status = $_GET['status'] ?? '';
+        $sql = "SELECT ci.*, cs.name as project FROM construction_income ci LEFT JOIN construction_sites cs ON ci.site_id = cs.id";
+        if ($status) {
+            $sql .= " WHERE ci.payment_status = '$status'";
+        }
+        $sql .= " ORDER BY ci.date DESC";
+        $stmt = $pdo->query($sql);
         echo json_encode($stmt->fetchAll());
+    }
+} elseif ($action === 'complete_payment') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = json_decode(file_get_contents("php://input"), true);
+        $id = $data['id'] ?? null;
+        $type = $data['type'] ?? 'expense'; // expense or income
+        $method = $data['payment_method'] ?? 'cash';
+        $bankId = $data['bank_account_id'] ?? null;
+
+        if (!$id) {
+            echo json_encode(['success' => false, 'message' => 'Missing ID']);
+            exit;
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            $table = ($type === 'income') ? 'construction_income' : 'construction_expenses';
+
+            $f = $pdo->prepare("SELECT * FROM $table WHERE id = ?");
+            $f->execute([$id]);
+            $item = $f->fetch();
+
+            if (!$item || $item['payment_status'] === 'paid') {
+                throw new Exception("Invalid item or already paid");
+            }
+
+            // Update status
+            $up = $pdo->prepare("UPDATE $table SET payment_status = 'paid', payment_method = ?, bank_account_id = ? WHERE id = ?");
+
+            // Handle Balance Update
+            if ($method === 'bank' && $bankId) {
+                if ($type === 'expense') {
+                    // Deduct from bank
+                    $check = $pdo->prepare("SELECT balance FROM bank_accounts WHERE id = ?");
+                    $check->execute([$bankId]);
+                    $acc = $check->fetch();
+                    if (!$acc || $acc['balance'] < $item['amount']) {
+                        throw new Exception('Insufficient bank funds');
+                    }
+                    $bUp = $pdo->prepare("UPDATE bank_accounts SET balance = balance - ? WHERE id = ?");
+                    $bUp->execute([$item['amount'], $bankId]);
+                } else {
+                    // Add to bank
+                    $bUp = $pdo->prepare("UPDATE bank_accounts SET balance = balance + ? WHERE id = ?");
+                    $bUp->execute([$item['amount'], $bankId]);
+                }
+            }
+
+            $up->execute([$method, $bankId, $id]);
+
+            $pdo->commit();
+            echo json_encode(['success' => true]);
+
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
     }
 } elseif ($action === 'delete_site') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {

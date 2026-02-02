@@ -259,6 +259,7 @@ class App {
                     { id: 'pharmacy-pos', label: 'Point of Sale', icon: '🛒', submenu: true },
                     { id: 'pharmacy-stock', label: 'Stock Management', icon: '📦', submenu: true },
                     { id: 'pharmacy-bank', label: 'Bank & Transfers', icon: '🏦', submenu: true },
+                    { id: 'pharmacy-credit', label: 'Credit Management', icon: '💳', submenu: true },
                     { id: 'pharmacy-records', label: 'Sales History', icon: '📑', submenu: true }
                 ]
             },
@@ -271,6 +272,7 @@ class App {
                     { id: 'construction-expense', label: 'Log Expense', icon: '💸', submenu: true },
                     { id: 'construction-income', label: 'Log Income', icon: '💰', submenu: true },
                     { id: 'construction-bank', label: 'Bank & Transfers', icon: '🏦', submenu: true },
+                    { id: 'construction-credit', label: 'Credit Management', icon: '💳', submenu: true },
                     { id: 'construction-records', label: 'Financials', icon: '📋', submenu: true }
                 ]
             }
@@ -437,6 +439,17 @@ class App {
             } else {
                 this.initSectorBanking(module);
             }
+        }
+        
+        // Credit Module Initialization (handled within sector scripts usually, but if lazy loading needed...)
+        // Actually, we rely on Window.PharmacyModule etc.
+        if (action === 'credit') {
+             if (module === 'pharmacy' && window.PharmacyModule && window.PharmacyModule.initCreditPage) {
+                 window.PharmacyModule.initCreditPage();
+             }
+             if (module === 'construction' && window.ConstructionModule && window.ConstructionModule.initCreditPage) {
+                 window.ConstructionModule.initCreditPage();
+             }
         }
     }
 

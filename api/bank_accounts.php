@@ -81,9 +81,10 @@ if ($action === 'list') {
 
             $logStmt = $pdo->prepare("INSERT INTO activity_logs (action_type, module_name, details, performed_by, created_at) VALUES (?, ?, ?, ?, NOW())");
             $details = "Transferred $" . number_format($amount, 2) . " from $fromName to $toName";
+            $module = $data['module'] ?? 'BANKING';
             // We assume 'system' or 'admin' for now as we don't have session user here easily without auth check, 
             // but we can try to pass it or just say 'System/Admin'.
-            $logStmt->execute(['TRANSFER', 'BANKING', $details, 'Admin']);
+            $logStmt->execute(['TRANSFER', $module, $details, 'Admin']);
 
             $pdo->commit();
             echo json_encode(['success' => true]);

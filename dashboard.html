@@ -139,22 +139,22 @@
                 </div>
               </div>
 
-              <!-- Activity Stream -->
+              <!-- Bank Balances Chart (In Grid) -->
               <div class="card">
-                <h3>Recent Activity</h3>
-                <ul id="activity-stream" class="activity-list">
-                  <!-- Populated by JS -->
-                  <li class="empty-state">No recent activity</li>
-                </ul>
+                <h3>Bank Balances</h3>
+                <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
+                  <canvas id="admin-bank-chart"></canvas>
+                </div>
               </div>
             </div>
 
-            <!-- Bank Balances Chart (Full Width) -->
+            <!-- Activity Stream (Full Width) -->
             <div class="card" style="margin-bottom: 2rem;">
-              <h3>Bank Balances</h3>
-              <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
-                <canvas id="admin-bank-chart"></canvas>
-              </div>
+              <h3>Recent Activity</h3>
+              <ul id="activity-stream" class="activity-list">
+                <!-- Populated by JS -->
+                <li class="empty-state">No recent activity</li>
+              </ul>
             </div>
           </div>
 

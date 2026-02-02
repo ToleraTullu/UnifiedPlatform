@@ -46,7 +46,7 @@ class DataStore {
         }
     }
 
-    async transferFunds(fromId, toId, amount) {
+    async transferFunds(fromId, toId, amount, module = 'BANKING') {
         const url = API_BASE + 'bank_accounts.php?action=transfer';
         try {
             const res = await fetch(url, {
@@ -55,7 +55,8 @@ class DataStore {
                 body: JSON.stringify({
                     from_account_id: fromId,
                     to_account_id: toId,
-                    amount: amount
+                    amount: amount,
+                    module: module
                 })
             });
             const result = await res.json();

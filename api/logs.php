@@ -8,8 +8,29 @@ $action = $_GET['action'] ?? '';
 
 if ($action === 'list') {
     $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 50;
-    $stmt = $pdo->prepare("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT :limit");
+    $module = $_GET['module'] ?? '';
+    $type = $_GET['action_type'] ?? '';
+
+    $sql = "SELECT * FROM activity_logs WHERE 1=1";
+    $params = [];
+
+    if (!empty($module)) {
+        $sql .= " AND module_name = :module";
+        $params[':module'] = $module;
+    }
+    if (!empty($type)) {
+        $sql .= " AND action_type = :type";
+        $params[':type'] = $type;
+    }
+
+    $sql .= " ORDER BY created_at DESC LIMIT :limit";
+
+    $stmt = $pdo->prepare($sql);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    foreach ($params as $key => $val) {
+        $stmt->bindValue($key, $val);
+    }
+
     $stmt->execute();
     echo json_encode($stmt->fetchAll());
 

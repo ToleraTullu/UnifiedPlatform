@@ -71,8 +71,19 @@ if ($action === 'list') {
             $stmtAdd = $pdo->prepare("UPDATE bank_accounts SET balance = balance + ? WHERE id = ?");
             $stmtAdd->execute([$amount, $toId]);
 
-            // Log transfer (Optional: Create a transaction record if needed, for now just Activity Log via simple insert or just return success)
-            // For better tracking, we might want to insert into 'activity_logs' or a new 'bank_transactions' table, but for now we follow requirements.
+            // Log transfer
+            $stmtName = $pdo->prepare("SELECT bank_name FROM bank_accounts WHERE id = ?");
+            $stmtName->execute([$fromId]);
+            $fromName = $stmtName->fetchColumn() ?: 'Unknown Bank';
+
+            $stmtName->execute([$toId]);
+            $toName = $stmtName->fetchColumn() ?: 'Unknown Bank';
+
+            $logStmt = $pdo->prepare("INSERT INTO activity_logs (action_type, module_name, details, performed_by, created_at) VALUES (?, ?, ?, ?, NOW())");
+            $details = "Transferred $" . number_format($amount, 2) . " from $fromName to $toName";
+            // We assume 'system' or 'admin' for now as we don't have session user here easily without auth check, 
+            // but we can try to pass it or just say 'System/Admin'.
+            $logStmt->execute(['TRANSFER', 'BANKING', $details, 'Admin']);
 
             $pdo->commit();
             echo json_encode(['success' => true]);

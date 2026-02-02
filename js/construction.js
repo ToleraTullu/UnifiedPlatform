@@ -718,9 +718,10 @@ class ConstructionModule {
         tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Loading...</td></tr>';
 
         try {
+            const api = typeof API_BASE !== 'undefined' ? API_BASE : 'api/';
             const [resExp, resInc] = await Promise.all([
-                fetch('api/construction.php?action=expenses&status=pending'),
-                fetch('api/construction.php?action=income&status=pending')
+                fetch(api + 'construction.php?action=expenses&status=pending'),
+                fetch(api + 'construction.php?action=income&status=pending')
             ]);
             
             const expenses = await resExp.json();
@@ -774,7 +775,8 @@ class ConstructionModule {
         if (!confirm('Confirm payment settlement?')) return;
 
         try {
-            const res = await fetch('api/construction.php?action=complete_payment', {
+            const api = typeof API_BASE !== 'undefined' ? API_BASE : 'api/';
+            const res = await fetch(api + 'construction.php?action=complete_payment', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({

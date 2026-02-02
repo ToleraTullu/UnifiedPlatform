@@ -46,6 +46,18 @@ if ($action === 'sites') {
 
         $bank_account_id = !empty($data['bank_account_id']) ? $data['bank_account_id'] : null;
 
+        if ($bank_account_id && ($data['payment_method'] ?? 'cash') === 'bank') {
+            $check = $pdo->prepare("SELECT balance FROM bank_accounts WHERE id = ?");
+            $check->execute([$bank_account_id]);
+            $acc = $check->fetch();
+            if (!$acc || $acc['balance'] < $data['amount']) {
+                echo json_encode(['success' => false, 'message' => 'Insufficient bank funds']);
+                exit;
+            }
+            $up = $pdo->prepare("UPDATE bank_accounts SET balance = balance - ? WHERE id = ?");
+            $up->execute([$data['amount'], $bank_account_id]);
+        }
+
         $stmt = $pdo->prepare("INSERT INTO construction_expenses (site_id, description, amount, date, payment_method, bank_account_id, external_bank_name, external_account_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         try {
             $stmt->execute([
@@ -88,6 +100,11 @@ if ($action === 'sites') {
 
         $bank_account_id = !empty($data['bank_account_id']) ? $data['bank_account_id'] : null;
 
+        if ($bank_account_id && ($data['payment_method'] ?? 'cash') === 'bank') {
+            $up = $pdo->prepare("UPDATE bank_accounts SET balance = balance + ? WHERE id = ?");
+            $up->execute([$data['amount'], $bank_account_id]);
+        }
+
         $stmt = $pdo->prepare("INSERT INTO construction_income (site_id, description, amount, date, payment_method, bank_account_id) VALUES (?, ?, ?, ?, ?, ?)");
         try {
             $stmt->execute([
@@ -124,6 +141,16 @@ if ($action === 'sites') {
         $data = json_decode(file_get_contents("php://input"), true);
         if (isset($data['id'])) {
             $stmt = $pdo->prepare("DELETE FROM construction_expenses WHERE id = ?");
+
+            // Reverse balance
+            $sStmt = $pdo->prepare("SELECT * FROM construction_expenses WHERE id = ?");
+            $sStmt->execute([$data['id']]);
+            $exp = $sStmt->fetch();
+
+            if ($exp && $exp['payment_method'] === 'bank' && $exp['bank_account_id']) {
+                $rup = $pdo->prepare("UPDATE bank_accounts SET balance = balance + ? WHERE id = ?");
+                $rup->execute([$exp['amount'], $exp['bank_account_id']]);
+            }
             if ($stmt->execute([$data['id']])) {
                 echo json_encode(['success' => true]);
             } else {
@@ -136,6 +163,16 @@ if ($action === 'sites') {
         $data = json_decode(file_get_contents("php://input"), true);
         if (isset($data['id'])) {
             $stmt = $pdo->prepare("DELETE FROM construction_income WHERE id = ?");
+
+            // Reverse balance
+            $sStmt = $pdo->prepare("SELECT * FROM construction_income WHERE id = ?");
+            $sStmt->execute([$data['id']]);
+            $inc = $sStmt->fetch();
+
+            if ($inc && $inc['payment_method'] === 'bank' && $inc['bank_account_id']) {
+                $rup = $pdo->prepare("UPDATE bank_accounts SET balance = balance - ? WHERE id = ?");
+                $rup->execute([$inc['amount'], $inc['bank_account_id']]);
+            }
             if ($stmt->execute([$data['id']])) {
                 echo json_encode(['success' => true]);
             } else {

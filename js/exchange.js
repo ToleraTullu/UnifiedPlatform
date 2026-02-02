@@ -210,6 +210,26 @@ class ExchangeModule {
         // Update Global Stat
         const globalEl = document.getElementById('stat-exchange');
         if (globalEl) globalEl.textContent = totalVol.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+
+        this.renderBankBalance();
+    }
+
+    async renderBankBalance() {
+        const banks = await window.Store.get('bank_accounts') || [];
+        const exchangeBanks = banks.filter(b => {
+            if (b.sectors === 'all' || !b.sectors) return true;
+            const sList = typeof b.sectors === 'string' ? b.sectors.split(',') : (Array.isArray(b.sectors) ? b.sectors : []);
+            return sList.includes('exchange');
+        });
+
+        const total = exchangeBanks.reduce((sum, b) => sum + parseFloat(b.balance || 0), 0);
+        const low = exchangeBanks.some(b => parseFloat(b.balance || 0) < parseFloat(b.min_balance_threshold || 0));
+
+        const el = document.getElementById('ex-bank-balance');
+        if (el) el.textContent = total.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+        
+        const notif = document.getElementById('ex-bank-notif');
+        if (notif) notif.style.display = low ? 'block' : 'none';
     }
 
     async renderWeeklyChart(dateFrom = null, dateTo = null) {

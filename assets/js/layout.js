@@ -140,7 +140,8 @@ class Layout {
                     { label: 'Manage Rates', icon: '⚙️', link: 'modules/exchange/manage.html', adminOnly: true },
                     { label: 'Buy Currency', icon: '📥', link: 'modules/exchange/buy.html' },
                     { label: 'Sell Currency', icon: '📤', link: 'modules/exchange/sell.html' },
-                    { label: 'Transactions', icon: '📝', link: 'modules/exchange/records.html' }
+                    { label: 'Transactions', icon: '📝', link: 'modules/exchange/records.html' },
+                    { label: 'Banking', icon: '🏦', link: 'modules/exchange/bank.html' }
                 ]
             },
             {
@@ -150,7 +151,8 @@ class Layout {
                     { label: 'Dashboard', icon: '🏥', link: 'modules/pharmacy/dashboard.html' },
                     { label: 'Point of Sale', icon: '🛒', link: 'modules/pharmacy/pos.html' },
                     { label: 'Stock Mgmt', icon: '📦', link: 'modules/pharmacy/stock.html' },
-                    { label: 'Sales History', icon: '📑', link: 'modules/pharmacy/records.html' }
+                    { label: 'Sales History', icon: '📑', link: 'modules/pharmacy/records.html' },
+                    { label: 'Banking', icon: '🏦', link: 'modules/pharmacy/bank.html' }
                 ]
             },
             {
@@ -160,7 +162,8 @@ class Layout {
                     { label: 'Dashboard', icon: '🏗️', link: 'modules/construction/dashboard.html' },
                     { label: 'Log Expense', icon: '💸', link: 'modules/construction/expense.html' },
                     { label: 'Log Income', icon: '💰', link: 'modules/construction/income.html' },
-                    { label: 'Financials', icon: '📋', link: 'modules/construction/records.html' }
+                    { label: 'Financials', icon: '📋', link: 'modules/construction/records.html' },
+                    { label: 'Banking', icon: '🏦', link: 'modules/construction/bank.html' }
                 ]
             }
         ];

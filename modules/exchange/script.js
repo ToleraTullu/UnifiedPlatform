@@ -122,8 +122,29 @@ class ExchangeModule {
         const elMonth = document.getElementById('ex-vol-month');
         if (elMonth) elMonth.innerHTML = `<div style="font-size:0.9rem">Buy: <strong>${fmtCur(volMonthBuy)}</strong></div><div style="font-size:0.9rem">Sell: <strong>${fmtCur(volMonthSell)}</strong></div>`;
         setTxt('ex-profit', fmtCur(estimatedProfit));
+        
+        // Add Bank Balance Logic
+        this.renderBankBalance();
 
         this.renderVolChart(curVol);
+    }
+
+    async renderBankBalance() {
+        const banks = await window.Store.get('bank_accounts') || [];
+        const exchangeBanks = banks.filter(b => {
+            if (b.sectors === 'all' || !b.sectors) return true;
+            const sList = typeof b.sectors === 'string' ? b.sectors.split(',') : (Array.isArray(b.sectors) ? b.sectors : []);
+            return sList.includes('exchange');
+        });
+
+        const total = exchangeBanks.reduce((sum, b) => sum + parseFloat(b.balance || 0), 0);
+        const low = exchangeBanks.some(b => parseFloat(b.balance || 0) < parseFloat(b.min_balance_threshold || 0));
+
+        const el = document.getElementById('ex-bank-balance');
+        if (el) el.textContent = total.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+        
+        const notif = document.getElementById('ex-bank-notif');
+        if (notif) notif.style.display = low ? 'block' : 'none';
     }
 
     renderVolChart(data) {

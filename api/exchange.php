@@ -55,6 +55,32 @@ if ($action === 'rates') {
             // Fix: Handle empty string for bank_account_id as NULL
             $bankAccountId = !empty($data['bank_account_id']) ? $data['bank_account_id'] : null;
 
+            // Balance Update Logic
+            if ($bankAccountId && ($data['payment_method'] ?? 'cash') === 'bank') {
+                // Verify funds for BUY (We are paying out, so balance decreases)
+                // Or for SELL (We are receiving, so balance increases)
+
+                // NOTE: 'buy' means we buy Foreign Currency, we PAY Local Currency. 
+                // 'sell' means we sell Foreign Currency, we RECEIVE Local Currency.
+                // Assuming 'total_local' is the amount taken/given from the bank account (Local Currency Account).
+
+                if ($data['type'] === 'buy') {
+                    // We pay out Local Currency
+                    $stmtCheck = $pdo->prepare("SELECT balance FROM bank_accounts WHERE id = ?");
+                    $stmtCheck->execute([$bankAccountId]);
+                    $acc = $stmtCheck->fetch();
+                    if (!$acc || $acc['balance'] < $data['total_local']) {
+                        throw new Exception("Insufficient bank funds");
+                    }
+                    $stmtUpdate = $pdo->prepare("UPDATE bank_accounts SET balance = balance - ? WHERE id = ?");
+                    $stmtUpdate->execute([$data['total_local'], $bankAccountId]);
+                } elseif ($data['type'] === 'sell') {
+                    // We receive Local Currency
+                    $stmtUpdate = $pdo->prepare("UPDATE bank_accounts SET balance = balance + ? WHERE id = ?");
+                    $stmtUpdate->execute([$data['total_local'], $bankAccountId]);
+                }
+            }
+
             $stmt->execute([
                 date('Y-m-d H:i:s', strtotime($data['date'] ?? 'now')),
                 $data['type'],
@@ -88,6 +114,23 @@ if ($action === 'rates') {
 
         if ($id) {
             $stmt = $pdo->prepare("DELETE FROM exchange_transactions WHERE id = ?");
+            // Reverse balance before deleting
+            $txStmt = $pdo->prepare("SELECT * FROM exchange_transactions WHERE id = ?");
+            $txStmt->execute([$id]);
+            $tx = $txStmt->fetch();
+
+            if ($tx && $tx['payment_method'] === 'bank' && $tx['bank_account_id']) {
+                if ($tx['type'] === 'buy') {
+                    // Was Buy (Deducted), now Add back
+                    $rup = $pdo->prepare("UPDATE bank_accounts SET balance = balance + ? WHERE id = ?");
+                    $rup->execute([$tx['total_local'], $tx['bank_account_id']]);
+                } elseif ($tx['type'] === 'sell') {
+                    // Was Sell (Added), now Deduct
+                    $rup = $pdo->prepare("UPDATE bank_accounts SET balance = balance - ? WHERE id = ?");
+                    $rup->execute([$tx['total_local'], $tx['bank_account_id']]);
+                }
+            }
+
             if ($stmt->execute([$id])) {
                 echo json_encode(['success' => true]);
             } else {

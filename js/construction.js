@@ -223,7 +223,26 @@ class ConstructionModule {
         setTxt('cons-dash-credit-expense', credExp);
         setTxt('cons-dash-credit-income', credInc);
         
+        this.renderBankBalance();
         this.renderWeeklyChart(dateFrom, dateTo, filteredExpenses, filteredIncomes); // Render weekly trend chart
+    }
+
+    async renderBankBalance() {
+        const banks = await window.Store.get('bank_accounts') || [];
+        const constructionBanks = banks.filter(b => {
+             if (b.sectors === 'all' || !b.sectors) return true;
+             const sList = typeof b.sectors === 'string' ? b.sectors.split(',') : (Array.isArray(b.sectors) ? b.sectors : []);
+             return sList.includes('construction');
+        });
+
+        const total = constructionBanks.reduce((sum, b) => sum + parseFloat(b.balance || 0), 0);
+        const low = constructionBanks.some(b => parseFloat(b.balance || 0) < parseFloat(b.min_balance_threshold || 0));
+
+        const el = document.getElementById('cons-bank-balance');
+        if (el) el.textContent = total.toLocaleString(undefined, { style: 'currency', currency: 'ETB' });
+        
+        const notif = document.getElementById('cons-bank-notif');
+        if (notif) notif.style.display = low ? 'block' : 'none';
     }
 
     async updateStats() {

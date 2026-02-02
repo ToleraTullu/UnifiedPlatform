@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS bank_accounts (
     account_number VARCHAR(50) NOT NULL,
     account_holder VARCHAR(100) NOT NULL,
     sectors VARCHAR(255) DEFAULT 'all', -- Comma-separated: 'exchange,pharmacy,construction' or 'all'
+    balance DECIMAL(15, 2) DEFAULT 0.00,
+    min_balance_threshold DECIMAL(15, 2) DEFAULT 0.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -170,12 +170,17 @@ class AdminModule {
             }).join('') : '<span class="text-muted">All Sectors</span>';
 
             const tr = document.createElement('tr');
+            const balanceClass = parseFloat(b.balance) < parseFloat(b.min_balance_threshold) ? 'text-danger' : 'text-success';
             tr.innerHTML = `
                 <td>
                     <div style="font-weight:600">${b.bank_name}</div>
                     <div style="font-size:0.8rem; color:var(--text-muted)">Acc: ${b.account_number}</div>
                 </td>
                 <td>${b.account_holder}</td>
+                <td>
+                    <div class="${balanceClass}" style="font-weight:bold;">${parseFloat(b.balance).toLocaleString()}</div>
+                    <small style="color:var(--text-muted)">Min: ${parseFloat(b.min_balance_threshold).toLocaleString()}</small>
+                </td>
                 <td>${sectors}</td>
                 <td style="text-align:right">
                     <button class="btn-secondary edit-bank" data-id="${b.id}" style="padding:5px 10px; font-size:0.8rem;">Edit</button> 
@@ -211,6 +216,8 @@ class AdminModule {
             bank_name: fd.get('bank_name'),
             account_number: fd.get('account_number'),
             account_holder: fd.get('account_holder'),
+            balance: fd.get('balance'),
+            min_balance_threshold: fd.get('min_balance_threshold'),
             sectors: sectors.length > 0 ? sectors.join(',') : 'all'
         };
 
@@ -244,6 +251,8 @@ class AdminModule {
         form.querySelector('[name="bank_name"]').value = b.bank_name;
         form.querySelector('[name="account_number"]').value = b.account_number;
         form.querySelector('[name="account_holder"]').value = b.account_holder;
+        form.querySelector('[name="balance"]').value = b.balance;
+        form.querySelector('[name="min_balance_threshold"]').value = b.min_balance_threshold;
 
         form.querySelectorAll('input[name="sector"]').forEach(cb => cb.checked = false);
         if (Array.isArray(b.sectors)) {
@@ -251,6 +260,11 @@ class AdminModule {
                 const cb = form.querySelector(`input[name="sector"][value="${s}"]`);
                 if (cb) cb.checked = true;
             });
+        } else if (typeof b.sectors === 'string') {
+             b.sectors.split(',').forEach(s => {
+                 const cb = form.querySelector(`input[name="sector"][value="${s.trim()}"]`);
+                 if (cb) cb.checked = true;
+             });
         }
 
         document.getElementById('submit-btn-bank').textContent = 'Update Account';

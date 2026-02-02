@@ -100,7 +100,26 @@ class PharmacyModule {
         document.getElementById('ph-low-stock').textContent = lowStock;
 
         this.updateStats(); // Also sync global
+        this.renderBankBalance();
         this.renderWeeklyChart(dateFrom, dateTo, filteredSales); // Pass filtered data to chart
+    }
+
+    async renderBankBalance() {
+        const banks = await window.Store.get('bank_accounts') || [];
+        const pharmacyBanks = banks.filter(b => {
+             if (b.sectors === 'all' || !b.sectors) return true;
+             const sList = typeof b.sectors === 'string' ? b.sectors.split(',') : (Array.isArray(b.sectors) ? b.sectors : []);
+             return sList.includes('pharmacy');
+        });
+
+        const total = pharmacyBanks.reduce((sum, b) => sum + parseFloat(b.balance || 0), 0);
+        const low = pharmacyBanks.some(b => parseFloat(b.balance || 0) < parseFloat(b.min_balance_threshold || 0));
+
+        const el = document.getElementById('ph-bank-balance');
+        if (el) el.textContent = total.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+        
+        const notif = document.getElementById('ph-bank-notif');
+        if (notif) notif.style.display = low ? 'block' : 'none';
     }
 
     async updateStats() {

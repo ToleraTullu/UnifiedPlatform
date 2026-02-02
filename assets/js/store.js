@@ -163,6 +163,27 @@ class DataStore {
             return [];
         }
     }
+
+    async transferFunds(fromId, toId, amount) {
+        const url = API_BASE + 'bank_accounts.php?action=transfer';
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    from_account_id: fromId,
+                    to_account_id: toId,
+                    amount: amount
+                })
+            });
+            const result = await res.json();
+            if (!result.success) throw new Error(result.message || 'Transfer failed');
+            return true;
+        } catch (e) {
+            console.error('Transfer failed:', e);
+            throw e;
+        }
+    }
 }
 
 window.Store = new DataStore();

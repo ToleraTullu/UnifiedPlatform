@@ -21,18 +21,78 @@ if ($action === 'list') {
             exit;
         }
 
-        $stmt = $pdo->prepare("INSERT INTO bank_accounts (bank_name, account_number, account_holder, sectors) VALUES (?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO bank_accounts (bank_name, account_number, account_holder, sectors, balance, min_balance_threshold) VALUES (?, ?, ?, ?, ?, ?)");
         try {
             $stmt->execute([
                 $data['bank_name'],
                 $data['account_number'],
                 $data['account_holder'] ?? '',
-                $data['sectors'] ?? 'all'
+                $data['sectors'] ?? 'all',
+                $data['balance'] ?? 0.00,
+                $data['min_balance_threshold'] ?? 0.00
             ]);
             $data['id'] = $pdo->lastInsertId();
             echo json_encode(['success' => true, 'data' => $data]);
         } catch (PDOException $e) {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+} elseif ($action === 'transfer') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = json_decode(file_get_contents("php://input"), true);
+
+        $fromId = $data['from_account_id'];
+        $toId = $data['to_account_id'];
+        $amount = (float) $data['amount'];
+
+        if (!$fromId || !$toId || $amount <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid transfer details']);
+            exit;
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            // Check sufficient funds
+            $stmtCheck = $pdo->prepare("SELECT balance FROM bank_accounts WHERE id = ?");
+            $stmtCheck->execute([$fromId]);
+            $fromAcc = $stmtCheck->fetch();
+
+            if (!$fromAcc || $fromAcc['balance'] < $amount) {
+                throw new Exception("Insufficient funds");
+            }
+
+            // Deduct from sender
+            $stmtDeduct = $pdo->prepare("UPDATE bank_accounts SET balance = balance - ? WHERE id = ?");
+            $stmtDeduct->execute([$amount, $fromId]);
+
+            // Add to receiver
+            $stmtAdd = $pdo->prepare("UPDATE bank_accounts SET balance = balance + ? WHERE id = ?");
+            $stmtAdd->execute([$amount, $toId]);
+
+            // Log transfer (Optional: Create a transaction record if needed, for now just Activity Log via simple insert or just return success)
+            // For better tracking, we might want to insert into 'activity_logs' or a new 'bank_transactions' table, but for now we follow requirements.
+
+            $pdo->commit();
+            echo json_encode(['success' => true]);
+
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+} elseif ($action === 'update_balance') {
+    // Admin manual update or specific adjustment
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = json_decode(file_get_contents("php://input"), true);
+        if (!empty($data['id']) && isset($data['balance'])) {
+            $stmt = $pdo->prepare("UPDATE bank_accounts SET balance = ? WHERE id = ?");
+            if ($stmt->execute([$data['balance'], $data['id']])) {
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to update']);
+            }
         }
     }
 

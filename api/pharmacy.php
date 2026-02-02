@@ -66,7 +66,13 @@ if ($action === 'stock') {
             $bank_account_id = !empty($sale['bank_account_id']) ? $sale['bank_account_id'] : null;
             $amt = $sale['total_amount'] ?? $sale['total'] ?? 0;
 
-            // 1. Insert Sale
+            // 1. Update Bank Balance if needed
+            if ($bank_account_id && $sale['payment_method'] === 'bank') {
+                $stmtUpdate = $pdo->prepare("UPDATE bank_accounts SET balance = balance + ? WHERE id = ?");
+                $stmtUpdate->execute([$amt, $bank_account_id]);
+            }
+
+            // 2. Insert Sale
             $stmt = $pdo->prepare("INSERT INTO pharmacy_sales (date, total_amount, payment_method, bank_account_id, doctor_name, patient_name) VALUES (?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $sale['date'] ?? date('Y-m-d H:i:s'),
@@ -142,6 +148,16 @@ if ($action === 'stock') {
         $data = json_decode(file_get_contents("php://input"), true);
         if (isset($data['id'])) {
             $stmt = $pdo->prepare("DELETE FROM pharmacy_sales WHERE id = ?");
+            // Reverse balance
+            $sStmt = $pdo->prepare("SELECT * FROM pharmacy_sales WHERE id = ?");
+            $sStmt->execute([$data['id']]);
+            $sale = $sStmt->fetch();
+
+            if ($sale && $sale['payment_method'] === 'bank' && $sale['bank_account_id']) {
+                $rup = $pdo->prepare("UPDATE bank_accounts SET balance = balance - ? WHERE id = ?");
+                $rup->execute([$sale['total_amount'], $sale['bank_account_id']]);
+            }
+
             if ($stmt->execute([$data['id']])) {
                 echo json_encode(['success' => true]);
             } else {

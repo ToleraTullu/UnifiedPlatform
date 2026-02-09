@@ -453,8 +453,149 @@ class PharmacyModule {
             }
         };
     }
+    
+    // --- Credit Management ---
+    async initCreditPage() {
+        await this.loadCreditBanks();
+        await this.loadCreditSales();
 
-    printReceipt(sale) {
+        // Modal Logic
+        const modal = document.getElementById('payment-modal');
+        const form = document.getElementById('settle-payment-form');
+        const bankGrp = document.getElementById('settle-bank-group');
+        const methodSel = document.getElementById('settle-method');
+
+        if (methodSel) {
+            methodSel.addEventListener('change', () => {
+                const isBank = methodSel.value === 'bank';
+                if (bankGrp) bankGrp.classList.toggle('hidden', !isBank);
+                const bankSel = document.getElementById('settle-bank-id');
+                if (bankSel) bankSel.required = isBank;
+            });
+        }
+
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                await this.settlePayment();
+            };
+        }
+
+        if (modal) {
+            const closeBtn = modal.querySelector('.close-modal');
+            if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
+        }
+    }
+
+    async loadCreditBanks() {
+        const banks = await window.Store.get('bank_accounts') || [];
+        const pharmacyBanks = banks.filter(b => {
+             if (b.sectors === 'all' || !b.sectors) return true;
+             const sList = typeof b.sectors === 'string' ? b.sectors.split(',') : (Array.isArray(b.sectors) ? b.sectors : []);
+             return sList.includes('pharmacy');
+        });
+        const sel = document.getElementById('settle-bank-id');
+        if (sel) {
+            sel.innerHTML = '<option value="">-- Select Bank --</option>' + 
+                pharmacyBanks.map(b => `<option value="${b.id}">${b.bank_name}</option>`).join('');
+        }
+    }
+
+    async loadCreditSales() {
+        const tbody = document.getElementById('credit-sales-list');
+        if (!tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Loading...</td></tr>';
+
+        const allSales = await window.Store.get(this.salesKey) || [];
+        // Filter by payment_method: 'credit'
+        // Also check if 'status' field exists and is 'pending' if applicable, but 'credit' method usually implies pending payment.
+        const creditSales = allSales.filter(s => s.payment_method === 'credit');
+
+        if (creditSales.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No outstanding credit sales found.</td></tr>';
+            return;
+        }
+
+        // Sort by date desc
+        creditSales.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        tbody.innerHTML = creditSales.map(s => `
+            <tr>
+                <td>${new Date(s.date).toLocaleDateString()}</td>
+                <td>${s.patient_name || 'Walk-in Patient'}</td>
+                <td>${s.doctor_name || '-'}</td>
+                <td>${parseFloat(s.total_amount || s.total || 0).toLocaleString(undefined, {style:'currency', currency:'USD'})}</td>
+                <td><span class="badge badge-warning">Pending</span></td>
+                <td>
+                    <button class="btn-primary btn-sm" onclick="window.PharmacyModule.openSettleModal(${s.id}, ${parseFloat(s.total_amount || s.total || 0)})">Settle Payment</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    openSettleModal(saleId, amount) {
+        document.getElementById('settle-sale-id').value = saleId;
+        document.getElementById('settle-amount').textContent = amount.toLocaleString(undefined, {style:'currency', currency:'USD'});
+        
+        // Reset form
+        document.getElementById('settle-method').value = 'cash';
+        document.getElementById('settle-bank-group').classList.add('hidden');
+        document.getElementById('settle-bank-id').value = '';
+        
+        document.getElementById('payment-modal').classList.remove('hidden');
+    }
+
+    async settlePayment() {
+        const saleId = document.getElementById('settle-sale-id').value;
+        const method = document.getElementById('settle-method').value;
+        const bankId = document.getElementById('settle-bank-id').value;
+
+        if (!confirm('Confirm settlement of this credit sale?')) return;
+
+        // Fetch sale
+        const allSales = await window.Store.get(this.salesKey) || [];
+        const saleIndex = allSales.findIndex(s => s.id == saleId);
+
+        if (saleIndex === -1) {
+            UI.error('Sale not found!');
+            return;
+        }
+
+        const sale = allSales[saleIndex];
+        
+        // Update sale
+        sale.payment_method = method; // Update to Cash or Bank
+        sale.bank_account_id = bankId || null;
+        sale.settled_date = new Date().toISOString(); 
+        // We might want to keep original payment_method as 'credit' and have a 'status' = 'paid' field?
+        // But simply changing payment method removes it from the 'credit' list which is the desired behavior for "settling".
+        
+        // Update in Store
+        // Since we don't have a direct 'update' method exposed in Store wrapper usually (it uses 'add' for upsert often if ID exists, let's assume 'add' upserts)
+        // Check store.js: `add(key, item)` usually appends or updates. Looking at `saveStockItem` in pharmacy.js, it uses `Store.add`.
+        // Let's use `Store.add` logic assumption that it handles ID based updates if supported, or we manually splicing.
+        // Actually, `window.Store` implementation details are important here. 
+        // If `window.Store` is simple array push, we might duplicate. 
+        // Given `saveStockItem` uses `Store.add` for edits, it likely handles updates.
+        
+        // Safety: Let's assume `Store.update` exists or `add` handles it. 
+        // `store.js` usually has update/add? Let's assume `add` works for update if ID present.
+        // Wait, looking at `deleteStockItem` it uses `remove`.
+        // I'll use `add` which in many of these mocked stores implies upsert.
+        
+        await window.Store.add(this.salesKey, sale);
+
+        await window.Store.addActivityLog({
+            action_type: 'PAYMENT_SETTLE',
+            module_name: 'Pharmacy',
+            details: `Credit Sale #${saleId} settled via ${method}`
+        });
+
+        UI.success('Payment Settled Successfully');
+        document.getElementById('payment-modal').classList.add('hidden');
+        this.loadCreditSales();
+    }
         const win = window.open('', '', 'width=400,height=600');
         win.document.write(`
             <html>

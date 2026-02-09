@@ -675,8 +675,9 @@ class ConstructionModule {
 
         if (methodSel) {
             methodSel.addEventListener('change', () => {
-                bankGrp.classList.toggle('hidden', methodSel.value !== 'bank');
-                document.getElementById('settle-bank-id').required = (methodSel.value === 'bank');
+                if (bankGrp) bankGrp.classList.toggle('hidden', methodSel.value !== 'bank');
+                const bankSel = document.getElementById('settle-bank-id');
+                if (bankSel) bankSel.required = (methodSel.value === 'bank');
             });
         }
 
@@ -718,18 +719,17 @@ class ConstructionModule {
         tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Loading...</td></tr>';
 
         try {
-            const api = typeof API_BASE !== 'undefined' ? API_BASE : 'api/';
-            const [resExp, resInc] = await Promise.all([
-                fetch(api + 'construction.php?action=expenses&status=pending'),
-                fetch(api + 'construction.php?action=income&status=pending')
-            ]);
-            
-            const expenses = await resExp.json();
-            const income = await resInc.json();
+            // Use Store instead of direct fetch
+            const expenses = await window.Store.get(this.expKey) || [];
+            const income = await window.Store.get(this.incKey) || [];
+
+            // Client-side Filter for Pending
+            const pendingExp = expenses.filter(e => e.payment_status === 'pending' || e.payment_method === 'credit');
+            const pendingInc = income.filter(i => i.payment_status === 'pending' || i.payment_method === 'credit');
 
             const all = [
-                ...expenses.map(e => ({...e, type: 'expense'})), 
-                ...income.map(i => ({...i, type: 'income'}))
+                ...pendingExp.map(e => ({...e, type: 'expense'})), 
+                ...pendingInc.map(i => ({...i, type: 'income'}))
             ].sort((a,b) => new Date(a.date) - new Date(b.date));
 
             tbody.innerHTML = '';
@@ -775,8 +775,10 @@ class ConstructionModule {
         if (!confirm('Confirm payment settlement?')) return;
 
         try {
-            const api = typeof API_BASE !== 'undefined' ? API_BASE : 'api/';
-            const res = await fetch(api + 'construction.php?action=complete_payment', {
+            // Adjust API path based on location
+            const apiPath = (window.location.pathname.includes('/modules/') || window.location.pathname.includes('\\modules\\')) ? '../../api/' : 'api/';
+            
+            const res = await fetch(apiPath + 'construction.php?action=complete_payment', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
@@ -791,10 +793,12 @@ class ConstructionModule {
                 UI.success('Transaction settled successfully!');
                 document.getElementById('payment-modal').classList.add('hidden');
                 this.loadCreditTransactions(); 
+                this.updateStats(); 
             } else {
                 UI.error(result.message || 'Settlement failed.');
             }
         } catch (e) {
+            console.error(e);
             UI.error('Connection error.');
         }
     }

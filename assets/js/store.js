@@ -3,7 +3,9 @@
  * Connectivity to PHP/MySQL Backend
  */
 
-const API_BASE = 'api/';
+// Detect if we are in a submodule (nested path) and adjust API base
+// This assumes modules are in 'modules/xxx/' so we go up 2 levels
+const API_BASE = (window.location.pathname.includes('/modules/') || window.location.pathname.includes('\\modules\\')) ? '../../api/' : 'api/';
 
 const ENDPOINTS = {
     'unified_users': 'users.php',

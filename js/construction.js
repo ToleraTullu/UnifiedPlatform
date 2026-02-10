@@ -447,6 +447,7 @@ class ConstructionModule {
 
             const data = {
                 site_id: document.getElementById(siteId).value,
+                site: siteName,
                 description: document.getElementById(descId).value,
                 amount: parseFloat(document.getElementById(amtId).value),
                 date: document.getElementById(dateId).value,

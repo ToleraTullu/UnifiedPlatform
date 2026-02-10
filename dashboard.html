@@ -566,7 +566,6 @@
                 <canvas id="pharmacy-weekly-chart"></canvas>
               </div>
             </div>
-          </div>
 
           <div id="view-pharmacy-pos" class="view-section hidden">
             <!-- POS UI moved here -->
@@ -616,6 +615,27 @@
                   </tr>
                 </thead>
                 <tbody id="pharmacy-stock-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="view-pharmacy-credit" class="view-section hidden">
+            <h3>Pharmacy Credit Management</h3>
+            <div class="card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Patient Name</th>
+                    <th>Doctor</th>
+                    <th>Total Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="credit-sales-list">
+                  <tr><td colspan="6" class="empty-state">Loading credit sales...</td></tr>
+                </tbody>
               </table>
             </div>
           </div>
@@ -938,6 +958,27 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+          </div>
+
+          <div id="view-construction-credit" class="view-section hidden">
+            <h3>Construction Credit Management</h3>
+            <div class="card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Site</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="credit-list">
+                  <tr><td colspan="6" class="empty-state">Loading credits...</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -1429,6 +1470,39 @@
           </div>
         </div>
       </main>
+    </div>
+
+    <!-- Shared Payment Modal for Credit Settlement -->
+    <div id="payment-modal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2 id="payment-modal-title">Settle Payment</h2>
+        <div id="settle-amount-display" style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem; text-align: center;"></div>
+        <form id="settle-payment-form">
+          <input type="hidden" id="settle-sale-id" />
+          <input type="hidden" id="settle-id" />
+          <input type="hidden" id="settle-type" />
+          
+          <div class="form-group">
+            <label>Payment Method</label>
+            <select id="settle-method" class="form-control" required>
+              <option value="cash">Cash</option>
+              <option value="bank">Bank Transfer</option>
+            </select>
+          </div>
+          
+          <div id="settle-bank-group" class="form-group hidden">
+            <label>Select Bank</label>
+            <select id="settle-bank-id" class="form-control"></select>
+          </div>
+          
+          <div style="padding: 10px; background: #f0f0f0; border-radius: 5px; margin-bottom: 15px; text-align: center;">
+            Amount Due: <span id="settle-amount" style="font-weight:bold"></span>
+          </div>
+          
+          <button type="submit" class="btn-primary full-width">Confirm Settlement</button>
+        </form>
+      </div>
     </div>
 
     <!-- Generic Modal for edits only -->

@@ -596,6 +596,8 @@ class PharmacyModule {
         document.getElementById('payment-modal').classList.add('hidden');
         this.loadCreditSales();
     }
+    
+    printReceipt(sale) {
         const win = window.open('', '', 'width=400,height=600');
         win.document.write(`
             <html>

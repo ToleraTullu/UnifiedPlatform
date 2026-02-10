@@ -539,6 +539,7 @@ class ConstructionModule {
         let incomes = (await window.Store.get(this.incKey) || []).map(i => ({ ...i, cat: 'income' }));
         const all = [...expenses, ...incomes];
         const bankAccounts = await window.Store.get('bank_accounts') || [];
+        const sites = await window.Store.get(this.sitesKey) || [];
 
         const isAdmin = window.Auth && window.Auth.currentUser && window.Auth.currentUser.role === 'admin';
 
@@ -596,7 +597,7 @@ class ConstructionModule {
                 <td><span style="color:${color};font-weight:bold">${tx.cat.toUpperCase()}</span></td>
                 <td>
                     <span style="font-size:0.85rem; background:var(--bg-body); padding:2px 6px; border-radius:4px; margin-right:5px">
-                        ${tx.site || 'General'}
+                        ${tx.site || (sites.find(s => s.id == tx.site_id)?.name) || 'General'}
                     </span>
                     ${tx.description.length > 30 ? tx.description.substring(0, 30) + '...' : tx.description}
                 </td>
@@ -617,7 +618,7 @@ class ConstructionModule {
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
                         <div>
                             <h5 style="margin-bottom:10px; color:var(--primary)">Project Details</h5>
-                            <div style="margin-bottom:5px;"><strong>Site Name:</strong> ${tx.site || 'General'}</div>
+                            <div style="margin-bottom:5px;"><strong>Site Name:</strong> ${tx.site || (sites.find(s => s.id == tx.site_id)?.name) || 'General'}</div>
                             <div style="margin-bottom:5px;"><strong>Description:</strong> ${tx.description}</div>
                         </div>
                         <div>

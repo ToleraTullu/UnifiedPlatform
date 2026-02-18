@@ -82,7 +82,7 @@
   <script src="../assets/js/auth.js"></script>
   <script src="../assets/js/layout.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       const layout = new Layout();
       layout.ensureLayoutContainers();
       layout.renderSidebar();
@@ -101,81 +101,97 @@
       const submitBtn = document.getElementById('submit-btn');
       const editMode = document.getElementById('edit-mode');
 
-      function render() {
-        const users = window.Store.get('unified_users') || [];
+      const roleLabels = {
+        'admin': 'Global Admin',
+        'exchange_user': 'Exchange Operator',
+        'pharmacy_user': 'Pharmacy Operator',
+        'pharmacy_manager': 'Pharmacy Manager',
+        'pharmacy_cashier': 'Pharmacy Cashier',
+        'construction_user': 'Construction Manager'
+      };
+
+      async function render() {
+        tbody.innerHTML = '<tr><td colspan="3" class="empty-state">Loading...</td></tr>';
+        const users = await window.Store.get('unified_users') || [];
         tbody.innerHTML = '';
+        if (!users.length) {
+          tbody.innerHTML = '<tr><td colspan="3" class="empty-state">No users found.</td></tr>';
+          return;
+        }
         users.forEach(u => {
           const tr = document.createElement('tr');
-          const roleBadge = u.role === 'admin' ? 'blue' : 'green';
+          const label = roleLabels[u.role] || u.role.replace(/_/g, ' ');
           tr.innerHTML = `
             <td>
                 <div style="font-weight:600">${u.name || u.username}</div>
                 <div style="font-size:0.8rem; color:var(--text-muted)">@${u.username}</div>
             </td>
             <td>
-                <span class="role-badge" style="background:rgba(255,215,0,0.2); color:var(--text-main); border:1px solid var(--primary);">${u.role.replace('_', ' ')}</span>
+                <span class="role-badge" style="background:rgba(255,215,0,0.2); color:var(--text-main); border:1px solid var(--primary);">${label}</span>
             </td>
             <td style="text-align:right">
-                <button class="btn-secondary edit-user" data-user="${u.username}" style="padding:5px 10px; font-size:0.8rem;">Edit</button> 
-                <button class="btn-danger delete-user" data-user="${u.username}" style="padding:5px 10px; font-size:0.8rem;">Delete</button>
+                <button class="btn-secondary edit-user" data-id="${u.id}" data-user="${u.username}" data-name="${u.name||''}" data-role="${u.role}" style="padding:5px 10px; font-size:0.8rem;">Edit</button>
+                <button class="btn-danger delete-user" data-id="${u.id}" data-user="${u.username}" style="padding:5px 10px; font-size:0.8rem;">Delete</button>
             </td>`;
           tbody.appendChild(tr);
         });
       }
 
-      render();
+      await render();
 
-      form.addEventListener('submit', (e) => {
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const fd = new FormData(form);
         const uname = fd.get('username').trim();
-        const users = window.Store.get('unified_users') || [];
-        
-        if (editMode.value) {
-            const idx = users.findIndex(u => u.username === editMode.value);
-            if (idx !== -1) {
-                users[idx].name = fd.get('name');
-                users[idx].role = fd.get('role');
-                if (fd.get('password')) users[idx].password = fd.get('password');
-            }
-        } else {
-            if (users.some(u => u.username === uname)) { alert('Username already exists'); return; }
-            users.push({ 
-                username: uname, 
-                password: fd.get('password'), 
-                name: fd.get('name') || '', 
-                role: fd.get('role') 
+        const role = fd.get('role');
+        const name = fd.get('name') || '';
+        const password = fd.get('password');
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+
+        try {
+          if (editMode.value) {
+            const payload = { id: editMode.value, name, role };
+            if (password) payload.password = password;
+            const res = await fetch('../api/users.php?action=update', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
             });
+            const result = await res.json();
+            if (!result.success) throw new Error(result.message || 'Update failed');
+          } else {
+            if (!password) { alert('Password is required'); return; }
+            await window.Store.add('unified_users', { username: uname, password, name, role });
+          }
+          resetForm();
+          await render();
+        } catch (err) {
+          alert('Error: ' + err.message);
+        } finally {
+          submitBtn.disabled = false;
         }
-        
-        window.Store.set('unified_users', users);
-        resetForm();
-        render();
       });
 
-      tbody.addEventListener('click', (ev) => {
-        const btn = ev.target.closest('button'); if (!btn) return;
-        const uname = btn.dataset.user;
-        
-        if (btn.classList.contains('delete-user')) {
-          if (!confirm('Delete user @' + uname + '?')) return;
-          let users = window.Store.get('unified_users') || [];
-          users = users.filter(u => u.username !== uname);
-          window.Store.set('unified_users', users); 
-          render();
-        } else if (btn.classList.contains('edit-user')) {
-          const users = window.Store.get('unified_users') || [];
-          const u = users.find(x => x.username === uname);
-          if (!u) return; 
+      tbody.addEventListener('click', async (ev) => {
+        const btn = ev.target.closest('button');
+        if (!btn) return;
 
-          editMode.value = u.username;
-          document.getElementById('u-username').value = u.username;
+        if (btn.classList.contains('delete-user')) {
+          const uname = btn.dataset.user;
+          const uid = btn.dataset.id;
+          if (!confirm('Delete user @' + uname + '?')) return;
+          await window.Store.remove('unified_users', uid);
+          await render();
+        } else if (btn.classList.contains('edit-user')) {
+          editMode.value = btn.dataset.id;
+          document.getElementById('u-username').value = btn.dataset.user;
           document.getElementById('u-username').disabled = true;
-          document.getElementById('u-name').value = u.name || '';
-          document.getElementById('u-role').value = u.role;
+          document.getElementById('u-name').value = btn.dataset.name || '';
+          document.getElementById('u-role').value = btn.dataset.role;
           document.getElementById('u-password').required = false;
           document.getElementById('u-password').placeholder = '(Leave blank to keep same)';
-          
           submitBtn.textContent = 'Update User';
           cancelBtn.style.display = 'block';
         }
@@ -190,6 +206,7 @@
         document.getElementById('u-password').required = true;
         document.getElementById('u-password').placeholder = '••••••••';
         submitBtn.textContent = 'Create User';
+        submitBtn.disabled = false;
         cancelBtn.style.display = 'none';
       }
     });

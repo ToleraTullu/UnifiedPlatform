@@ -35,6 +35,41 @@ if ($action === 'list') {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     }
+} elseif ($action === 'update') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = json_decode(file_get_contents("php://input"), true);
+        $id = $data['id'] ?? null;
+        if (!$id) {
+            echo json_encode(['success' => false, 'message' => 'Missing user ID']);
+            exit;
+        }
+        $fields = [];
+        $params = [];
+        if (isset($data['name'])) {
+            $fields[] = 'name = ?';
+            $params[] = $data['name'];
+        }
+        if (isset($data['role'])) {
+            $fields[] = 'role = ?';
+            $params[] = $data['role'];
+        }
+        if (!empty($data['password'])) {
+            $fields[] = 'password = ?';
+            $params[] = $data['password'];
+        }
+        if (empty($fields)) {
+            echo json_encode(['success' => false, 'message' => 'Nothing to update']);
+            exit;
+        }
+        $params[] = $id;
+        $stmt = $pdo->prepare("UPDATE users SET " . implode(', ', $fields) . " WHERE id = ?");
+        try {
+            $stmt->execute($params);
+            echo json_encode(['success' => true]);
+        } catch (PDOException $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
 } elseif ($action === 'delete') {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data = json_decode(file_get_contents("php://input"), true);

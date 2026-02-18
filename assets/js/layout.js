@@ -101,6 +101,7 @@ class Layout {
 
         // Helper to check role access
         const hasAccess = (roles) => role === 'admin' || roles.includes(role);
+        const isPharmacyCashier = role === 'pharmacy_cashier';
 
         // Sidebar Content
         sidebar.innerHTML = `
@@ -146,14 +147,14 @@ class Layout {
             },
             {
                 header: 'Pharmacy',
-                roles: ['admin', 'pharmacy_user'],
+                roles: ['admin', 'pharmacy_user', 'pharmacy_manager', 'pharmacy_cashier'],
                 items: [
-                    { label: 'Dashboard', icon: '🏥', link: 'modules/pharmacy/dashboard.html' },
+                    { label: 'Dashboard',    icon: '🏥', link: 'modules/pharmacy/dashboard.html', cashierHidden: true },
                     { label: 'Point of Sale', icon: '🛒', link: 'modules/pharmacy/pos.html' },
-                    { label: 'Stock Mgmt', icon: '📦', link: 'modules/pharmacy/stock.html' },
-                    { label: 'Credit Mgmt', icon: '💳', link: 'modules/pharmacy/credit.html' },
+                    { label: 'Stock Mgmt',   icon: '📦', link: 'modules/pharmacy/stock.html' },
+                    { label: 'Credit Mgmt',  icon: '💳', link: 'modules/pharmacy/credit.html',  cashierHidden: true },
                     { label: 'Sales History', icon: '📑', link: 'modules/pharmacy/records.html' },
-                    { label: 'Banking', icon: '🏦', link: 'modules/pharmacy/bank.html' }
+                    { label: 'Banking',      icon: '🏦', link: 'modules/pharmacy/bank.html',    cashierHidden: true }
                 ]
             },
             {
@@ -181,6 +182,8 @@ class Layout {
                 section.items.forEach(item => {
                     // skip admin-only items for non-admins
                     if (item.adminOnly && role !== 'admin') return;
+                    // skip cashier-hidden items for pharmacy_cashier
+                    if (item.cashierHidden && isPharmacyCashier) return;
                     const li = document.createElement('li');
                     li.innerHTML = `
                         <a href="${bp + item.link}" class="menu-item">

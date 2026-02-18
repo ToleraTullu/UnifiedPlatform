@@ -77,6 +77,13 @@
     <script src="../../assets/js/store.js"></script>
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/layout.js"></script>
+    <script>
+        // Redirect pharmacy_cashier away from restricted pages
+        (function() {
+            const u = JSON.parse(sessionStorage.getItem('active_user') || '{}');
+            if (u.role === 'pharmacy_cashier') { window.location.href = 'pos.html'; }
+        })();
+    </script>
     <script src="../../js/pharmacy.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {

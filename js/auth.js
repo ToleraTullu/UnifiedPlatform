@@ -52,6 +52,8 @@ class Auth {
         const permissions = {
             'exchange_user': ['exchange'],
             'pharmacy_user': ['pharmacy'],
+            'pharmacy_manager': ['pharmacy'],
+            'pharmacy_cashier': ['pharmacy'],
             'construction_user': ['construction']
         };
 

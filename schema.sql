@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL, -- Recommended: Store hashed passwords
-    role ENUM('admin', 'exchange_user', 'pharmacy_user', 'construction_user') NOT NULL,
+    role ENUM('admin', 'exchange_user', 'pharmacy_user', 'pharmacy_manager', 'pharmacy_cashier', 'construction_user') NOT NULL,
     name VARCHAR(100) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -148,6 +148,8 @@ INSERT INTO users (username, password, role, name) VALUES
 ('admin', '123', 'admin', 'Super Admin'),
 ('exchange', '123', 'exchange_user', 'Exchange Staff'),
 ('pharmacy', '123', 'pharmacy_user', 'Pharmacy Clerk'),
+('ph_manager', '123', 'pharmacy_manager', 'Pharmacy Manager'),
+('ph_cashier', '123', 'pharmacy_cashier', 'Pharmacy Cashier'),
 ('construction', '123', 'construction_user', 'Site Manager');
 
 INSERT INTO exchange_rates (code, buy_rate, sell_rate) VALUES

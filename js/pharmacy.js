@@ -643,7 +643,13 @@ class PharmacyModule {
 
         tbody.innerHTML = '';
 
-        const isAdmin = window.Auth && window.Auth.currentUser && window.Auth.currentUser.role === 'admin';
+        const userRole = window.Auth && window.Auth.currentUser && window.Auth.currentUser.role;
+        const isAdmin = userRole === 'admin';
+        const canEditStock = isAdmin || userRole === 'pharmacy_user' || userRole === 'pharmacy_manager';
+
+        // Hide the "Add New Product" button for cashiers
+        const addBtn = document.getElementById('btn-stock-add');
+        if (addBtn) addBtn.style.display = canEditStock ? '' : 'none';
 
         items.forEach(item => {
             const tr = document.createElement('tr');
@@ -684,7 +690,7 @@ class PharmacyModule {
                 <td>${item.qty} Items <br><small class="text-muted">${unitText}</small></td>
                 <td>${item.exp_date || '-'}</td>
                 <td>
-                    <button class="btn-secondary" onclick="window.PharmacyModule.openStockModal(${item.id})">Edit</button>
+                    ${canEditStock ? `<button class="btn-secondary" onclick="window.PharmacyModule.openStockModal(${item.id})">Edit</button>` : ''}
                     ${isAdmin ? `<button class="btn-danger" onclick="window.PharmacyModule.deleteStockItem(${item.id})" style="margin-left:5px">Delete</button>` : ''}
                 </td>
             `;

@@ -19,7 +19,8 @@ class App {
         // Default Route: Admin -> Overview, Others -> Their Dashboard
         let startView = 'admin-overview';
         if (this.currentUser.role === 'exchange_user') startView = 'exchange-dashboard';
-        if (this.currentUser.role === 'pharmacy_user') startView = 'pharmacy-dashboard';
+        if (this.currentUser.role === 'pharmacy_user' || this.currentUser.role === 'pharmacy_manager') startView = 'pharmacy-dashboard';
+        if (this.currentUser.role === 'pharmacy_cashier') startView = 'pharmacy-pos';
         if (this.currentUser.role === 'construction_user') startView = 'construction-dashboard';
 
         this.navigateTo(startView);
@@ -122,8 +123,8 @@ class App {
         const role = this.currentUser.role;
         const isAdmin = role === 'admin';
 
-        // 1. Pharmacy Alerts (Admin or Pharmacy User)
-        if (isAdmin || role === 'pharmacy_user') {
+        // 1. Pharmacy Alerts (Admin or Pharmacy User/Manager)
+        if (isAdmin || role === 'pharmacy_user' || role === 'pharmacy_manager') {
             const stock = await window.Store.get('pharmacy_items') || [];
             const lowStock = stock.filter(i => i.qty < 10);
             lowStock.forEach(i => {
@@ -253,13 +254,13 @@ class App {
             },
             {
                 header: 'Pharmacy',
-                roles: ['admin', 'pharmacy_user'],
+                roles: ['admin', 'pharmacy_user', 'pharmacy_manager', 'pharmacy_cashier'],
                 items: [
-                    { id: 'pharmacy-dashboard', label: 'Dashboard', icon: '🏥' },
+                    { id: 'pharmacy-dashboard', label: 'Dashboard', icon: '🏥', allowedRoles: ['admin', 'pharmacy_user', 'pharmacy_manager'] },
                     { id: 'pharmacy-pos', label: 'Point of Sale', icon: '🛒', submenu: true },
                     { id: 'pharmacy-stock', label: 'Stock Management', icon: '📦', submenu: true },
-                    { id: 'pharmacy-bank', label: 'Bank & Transfers', icon: '🏦', submenu: true },
-                    { id: 'pharmacy-credit', label: 'Credit Management', icon: '💳', submenu: true },
+                    { id: 'pharmacy-bank', label: 'Bank & Transfers', icon: '🏦', submenu: true, allowedRoles: ['admin', 'pharmacy_user', 'pharmacy_manager'] },
+                    { id: 'pharmacy-credit', label: 'Credit Management', icon: '💳', submenu: true, allowedRoles: ['admin', 'pharmacy_user', 'pharmacy_manager'] },
                     { id: 'pharmacy-records', label: 'Sales History', icon: '📑', submenu: true }
                 ]
             },
@@ -377,6 +378,9 @@ class App {
         const restrictions = {
             'exchange-rates': ['admin'],
             'construction-sites': ['admin'],
+            'pharmacy-dashboard': ['admin', 'pharmacy_user', 'pharmacy_manager'],
+            'pharmacy-bank': ['admin', 'pharmacy_user', 'pharmacy_manager'],
+            'pharmacy-credit': ['admin', 'pharmacy_user', 'pharmacy_manager'],
             // Admin only modules
             'admin-users': ['admin'],
             'admin-banks': ['admin'],
@@ -393,7 +397,7 @@ class App {
         const module = viewId.split('-')[0];
         const moduleRoles = {
             'exchange': ['admin', 'exchange_user'],
-            'pharmacy': ['admin', 'pharmacy_user'],
+            'pharmacy': ['admin', 'pharmacy_user', 'pharmacy_manager', 'pharmacy_cashier'],
             'construction': ['admin', 'construction_user']
         };
 
